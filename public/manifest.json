@@ -1,0 +1,24 @@
+{
+  "name": "MiRoster — Aerolíneas Argentinas",
+  "short_name": "MiRoster",
+  "description": "Tu programación de vuelos siempre disponible",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12121e",
+  "theme_color": "#003087",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
