@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const AEROPUERTOS = {
   AEP: 'Aeroparque Jorge Newbery', EZE: 'Ezeiza Ministro Pistarini',
@@ -32,10 +32,44 @@ const ROLE_COLOR = { CP:'#003087', FO:'#7F77DD', CM:'#1D9E75', AX:'#EF9F27' }
 const COLOR_TIPO = { libre:'#1D9E75', dl:'#378ADD', vuelo:'#7F77DD', guardia:'#EF9F27' }
 const LABEL_TIPO = { libre:'Libre', dl:'D/L', vuelo:'Vuelo', guardia:'Guardia' }
 
+// ─── CACHÉ ────────────────────────────────────────────────────────────────────
+// Guarda el roster procesado y cuándo fue la última sincronización.
+// Al iniciar la app, carga el roster guardado (funciona offline).
+
+function guardarRosterCache(roster) {
+  try {
+    localStorage.setItem('ar_roster', JSON.stringify(roster))
+    localStorage.setItem('ar_roster_ts', Date.now().toString())
+  } catch (e) {
+    console.warn('No se pudo guardar caché del roster:', e)
+  }
+}
+
+function cargarRosterCache() {
+  try {
+    const raw = localStorage.getItem('ar_roster')
+    if (!raw) return {}
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function tiempoDesdeSync() {
+  const ts = localStorage.getItem('ar_roster_ts')
+  if (!ts) return null
+  const diff = Date.now() - parseInt(ts)
+  const hs = Math.floor(diff / 3600000)
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (hs > 0) return `Hace ${hs}h ${mins}m`
+  if (mins > 0) return `Hace ${mins} min`
+  return 'Ahora mismo'
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function colorTipo(t) { return COLOR_TIPO[t] || '#ccc' }
 function labelTipo(t) { return LABEL_TIPO[t] || t || '' }
 
-// ---- COMPONENTES FUERA DEL APP ----
 function ModalBase({ onClose, children, dark }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'flex-end', zIndex:200 }} onClick={onClose}>
@@ -61,16 +95,16 @@ function BtnCerrar({ onClose, dark }) {
   )
 }
 
-// Procesa los vuelos del backend al formato del calendario
 function procesarVuelos(vuelos) {
   const days = {}
   const mesesN = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11}
 
   for (const v of vuelos) {
-    if (!v.salida) continue
+    // Para actividades sin salida (libre, DL), usar checkin si existe
+    const fechaRef = v.salida || v.checkin
+    if (!fechaRef) continue
 
-    // Parsear fecha desde el campo salida: "TUE 13MAY 07:00"
-    const m = v.salida.match(/(MON|TUE|WED|THU|FRI|SAT|SUN)\s+(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/)
+    const m = fechaRef.match(/(MON|TUE|WED|THU|FRI|SAT|SUN)\s+(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/)
     if (!m) continue
 
     const dayName = m[1]
@@ -80,21 +114,10 @@ function procesarVuelos(vuelos) {
     const tipo = v.tipo || 'vuelo'
 
     if (!days[key]) {
-      days[key] = {
-        tipo,
-        dia,
-        mes: mesesN[mesKey],
-        dayName,
-        flights: [],
-        checkin: null,
-        checkout: null
-      }
+      days[key] = { tipo, dia, mes: mesesN[mesKey], dayName, flights: [], checkin: null, checkout: null }
     }
 
-    // Si el día ya existe y el nuevo tipo es vuelo, mantener vuelo
-    if (tipo === 'vuelo' && days[key].tipo !== 'vuelo') {
-      days[key].tipo = 'vuelo'
-    }
+    if (tipo === 'vuelo' && days[key].tipo !== 'vuelo') days[key].tipo = 'vuelo'
 
     const dep = (v.salida?.match(/(\d{2}:\d{2})$/) || [])[1] || ''
     const arr = (v.llegada?.match(/(\d{2}:\d{2})$/) || [])[1] || ''
@@ -106,12 +129,7 @@ function procesarVuelos(vuelos) {
 
     if (tipo === 'vuelo') {
       days[key].flights.push({
-        num: v.vuelo,
-        from: v.origen,
-        to: v.destino,
-        dep,
-        arr,
-        crew: v.crew || []
+        num: v.vuelo, from: v.origen, to: v.destino, dep, arr, crew: v.crew || []
       })
     }
   }
@@ -119,13 +137,14 @@ function procesarVuelos(vuelos) {
   return days
 }
 
-// ---- APP ----
 export default function App() {
   const [usuario, setUsuario] = useState(() => localStorage.getItem('ar_usuario') || '')
   const [clave, setClave]     = useState(() => localStorage.getItem('ar_clave') || '')
   const [dark, setDark]       = useState(() => localStorage.getItem('ar_dark') === 'true')
   const [loading, setLoading] = useState(false)
-  const [roster, setRoster]   = useState({})
+  // ← Inicia con el roster cacheado (funciona offline desde el primer render)
+  const [roster, setRoster]   = useState(() => cargarRosterCache())
+  const [ultimaSync, setUltimaSync] = useState(() => tiempoDesdeSync())
   const [vista, setVista]     = useState('calendario')
   const hoy = new Date()
   const [mesActual, setMesActual]   = useState(hoy.getMonth())
@@ -137,6 +156,12 @@ export default function App() {
   const [usuarioEdit, setUsuarioEdit] = useState('')
   const [claveEdit, setClaveEdit]     = useState('')
   const [guardado, setGuardado]       = useState(false)
+
+  // Actualizar el texto "hace X minutos" cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => setUltimaSync(tiempoDesdeSync()), 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   const d = dark
   const bg     = d ? '#12121e' : '#f5f7fb'
@@ -186,9 +211,13 @@ export default function App() {
       })
       const data = await response.json()
       if (!data.ok) { alert('Error obteniendo roster'); return }
-      setRoster(procesarVuelos(data.vuelos || []))
+      const rosterProcesado = procesarVuelos(data.vuelos || [])
+      // ← Guarda en caché inmediatamente después de cada sync exitoso
+      guardarRosterCache(rosterProcesado)
+      setRoster(rosterProcesado)
+      setUltimaSync('Ahora mismo')
     } catch {
-      alert('Error conectando al servidor')
+      alert('Error conectando al servidor. Mostrando programación guardada.')
     } finally {
       setLoading(false)
     }
@@ -206,12 +235,19 @@ export default function App() {
     background: d ? '#2a2a3e' : '#fff', color: text, outline:'none'
   }
 
+  const tieneRoster = Object.keys(roster).length > 0
+
   return (
     <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text }}>
 
       {/* HEADER */}
       <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100 }}>
-        <span style={{ fontSize:18, fontWeight:700, color:text }}>✈️ Mi Programación</span>
+        <div>
+          <span style={{ fontSize:18, fontWeight:700, color:text }}>✈️ Mi Programación</span>
+          {ultimaSync && tieneRoster && (
+            <div style={{ fontSize:11, color:sub, marginTop:1 }}>🔄 {ultimaSync}</div>
+          )}
+        </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>
             {d?'☀️':'🌙'}
@@ -222,6 +258,13 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* BANNER offline si hay roster cacheado pero no hay conexión */}
+      {tieneRoster && !navigator.onLine && (
+        <div style={{ background:'#EF9F27', color:'#fff', fontSize:12, textAlign:'center', padding:'6px 16px' }}>
+          📴 Sin conexión — mostrando programación guardada
+        </div>
+      )}
 
       {/* TABS */}
       <div style={{ padding:'12px 16px 0', background:card, borderBottom:`1px solid ${border}` }}>
@@ -280,7 +323,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          {Object.keys(roster).length === 0 && (
+          {!tieneRoster && (
             <div style={{ textAlign:'center', padding:40, color:sub }}>
               <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
               <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
