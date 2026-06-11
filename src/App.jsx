@@ -365,7 +365,7 @@ background:
     }
   </span>
 )}
-                  {data?.tipo==='vuelo' && <span style={{ fontSize:9, color:'#7F77DD' }}>{data.flights.length}✈</span>}
+                  {data?.tipo==='vuelo' && <span style={{ fontSize:9, color:'#7F77DD' }}>{data.flights.length}</span>}
                 </div>
               )
             })}
