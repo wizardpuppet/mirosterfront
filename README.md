@@ -1,54 +1,16 @@
-# MiRoster — Frontend
+# React + Vite
 
-App PWA para ver la programación de vuelos de Aerolíneas Argentinas.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 🚀 Deploy en Vercel (recomendado)
+Currently, two official plugins are available:
 
-### Opción A — Deploy directo desde GitHub (más fácil)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-1. Subí esta carpeta a un repo de GitHub
-2. Entrá a [vercel.com](https://vercel.com) → New Project
-3. Conectá tu repo
-4. Vercel detecta Vite automáticamente → **Deploy**
-5. Listo, te da una URL `https://miroster-xxx.vercel.app`
+## React Compiler
 
-### Opción B — Deploy con CLI
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-npm install -g vercel
-npm install
-vercel
-```
+## Expanding the ESLint configuration
 
-## 💻 Desarrollo local
-
-```bash
-npm install
-npm run dev
-```
-
-## 📦 Lo que se agregó vs el original
-
-### Caché del roster (`App.jsx`)
-- Al hacer SYNC, el roster se guarda en `localStorage` con `guardarRosterCache()`
-- Al abrir la app, carga el roster guardado → **funciona offline sin hacer SYNC**
-- Muestra cuándo fue la última sincronización ("Hace 2h 30m")
-- Si no hay conexión, muestra un banner avisando que está mostrando datos guardados
-
-### Service Worker (`public/sw.js`)
-- Cachea los archivos de la app (HTML, JS, CSS)
-- Estrategia: Network first → fallback a caché
-- Las llamadas al backend de Railway van siempre a la red
-
-### PWA (`public/manifest.json` + `index.html`)
-- La app se puede instalar en el celular como app nativa
-- En iOS: Safari → Compartir → "Agregar a pantalla de inicio"
-- En Android: Chrome → menú → "Instalar app"
-
-## 🔑 Variables de entorno
-
-El backend está hardcodeado en `App.jsx`:
-```
-https://miroster-production.up.railway.app/roster
-```
-Si cambia la URL del backend de Railway, actualizarlo ahí.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
