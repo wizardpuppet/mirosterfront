@@ -336,12 +336,18 @@ export default function App() {
                 <div key={dia} onClick={() => data && setDiaSeleccionado(dia)} style={{
                   aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                   borderRadius:8, border:data?`2px solid ${colorTipo(data.tipo)}`:`1px solid ${border}`,
-                  background:const LABEL_TIPO = {
-  data?.tipo === 'vuelo'   ? '#7F77DD' :
-  data?.tipo === 'guardia' ? '#EF9F27' :
-  data?.tipo === 'dl'      ? '#378ADD' :
-  data?.tipo === 'libre'   ? '#1D9E75' :
-  (esHoy ? (d ? '#1a1a3e' : '#f0f4ff') : card), cursor:data?'pointer':'default'
+background:
+  data?.tipo === 'vuelo'
+    ? '#7F77DD'
+    : data?.tipo === 'guardia'
+    ? '#EF9F27'
+    : data?.tipo === 'dl'
+    ? '#378ADD'
+    : data?.tipo === 'libre'
+    ? '#1D9E75'
+    : esHoy
+    ? (d ? '#1a1a3e' : '#f0f4ff')
+    : card, cursor:data?'pointer':'default'
                 }}>
                   <span style={{ fontSize:14, fontWeight:esHoy?700:400, color:data ? '#fff' : (esHoy ? '#4e7fff' : text) }}>{dia}</span>
                   {data && (
