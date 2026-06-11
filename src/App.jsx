@@ -200,28 +200,52 @@ export default function App() {
     .filter(([, d]) => d.mes === mesActual)
     .sort((a, b) => a[1].dia - b[1].dia)
 
-  const sincronizar = async () => {
-    if (!usuario || !clave) { abrirConfig(); return }
-    try {
-      setLoading(true)
-      const response = await fetch('https://miroster-production.up.railway.app/roster', {
+
+    const sincronizar = async () => {
+  if (!usuario || !clave) {
+    abrirConfig()
+    return
+  }
+
+  try {
+    setLoading(true)
+
+    const response = await fetch(
+      'https://miroster-production.up.railway.app/roster',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario, clave })
-      })
-      const data = await response.json()
-      if (!data.ok) { alert('Error obteniendo roster'); return }
-      const rosterProcesado = procesarVuelos(data.vuelos || [])
-      // ← Guarda en caché inmediatamente después de cada sync exitoso
+      }
+    )
+
+    const data = await response.json()
+
+    if (!data.ok) {
+      alert('Error obteniendo roster. Mostrando programación guardada.')
+      return
+    }
+
+    const rosterProcesado = procesarVuelos(data.vuelos || [])
+
+    if (Object.keys(rosterProcesado).length > 0) {
       guardarRosterCache(rosterProcesado)
       setRoster(rosterProcesado)
       setUltimaSync('Ahora mismo')
-    } catch {
-      alert('Error conectando al servidor. Mostrando programación guardada.')
-    } finally {
-      setLoading(false)
+    } else {
+      alert(
+        'La sincronización devolvió una programación vacía. Se conserva la programación guardada.'
+      )
     }
+  } catch (err) {
+    console.error(err)
+    alert(
+      'Error conectando al servidor. Mostrando programación guardada.'
+    )
+  } finally {
+    setLoading(false)
   }
+}
 
   const abrirVuelo = (flight, dayData) => {
     setFlightModal({ flight, dayData })
