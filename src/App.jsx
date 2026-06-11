@@ -30,7 +30,7 @@ const DIAS_SEMANA_CORTO = {MON:'Lun',TUE:'Mar',WED:'Mié',THU:'Jue',FRI:'Vie',SA
 const ROLE_LABEL = { CP:'Comandante', FO:'Copiloto', CM:'Jefe de Cabina', AX:'Auxiliar' }
 const ROLE_COLOR = { CP:'#003087', FO:'#7F77DD', CM:'#1D9E75', AX:'#EF9F27' }
 const COLOR_TIPO = { libre:'#1D9E75', dl:'#378ADD', vuelo:'#7F77DD', guardia:'#EF9F27' }
-const LABEL_TIPO = { libre:'Libre', dl:'D/L', vuelo:'Vuelo', guardia:'Guardia' }
+const LABEL_TIPO = { libre:'Dia OFF', dl:'D/L', vuelo:'Vuelo', guardia:'Guardia' }
 
 // ─── CACHÉ ────────────────────────────────────────────────────────────────────
 // Guarda el roster procesado y cuándo fue la última sincronización.
@@ -262,7 +262,13 @@ export default function App() {
   const tieneRoster = Object.keys(roster).length > 0
 
   return (
-    <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text }}>
+    <div style={{
+  minHeight:'100vh',
+  background:bg,
+  fontFamily:"'Segoe UI', Arial, sans-serif",
+  color:text,
+  overflowX:'hidden'
+}}>
 
       {/* HEADER */}
       <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100 }}>
@@ -317,10 +323,10 @@ export default function App() {
       {/* CALENDARIO */}
       {vista === 'calendario' && (
         <div style={{ padding:'0 8px' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:4 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', marginBottom:4 }}>
             {DIAS_SEMANA.map(ds => <div key={ds} style={{ textAlign:'center', fontSize:11, color:sub, padding:'4px 0' }}>{ds}</div>)}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', gap:2 }}>
             {Array(primerDia).fill(null).map((_,i) => <div key={`e-${i}`} />)}
             {Array(diasEnMes).fill(null).map((_,i) => {
               const dia = i+1
@@ -330,17 +336,36 @@ export default function App() {
                 <div key={dia} onClick={() => data && setDiaSeleccionado(dia)} style={{
                   aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                   borderRadius:8, border:data?`2px solid ${colorTipo(data.tipo)}`:`1px solid ${border}`,
-                  background:esHoy?(d?'#1a1a3e':'#f0f4ff'):card, cursor:data?'pointer':'default'
+                  background:const LABEL_TIPO = {
+  data?.tipo === 'vuelo'   ? '#7F77DD' :
+  data?.tipo === 'guardia' ? '#EF9F27' :
+  data?.tipo === 'dl'      ? '#378ADD' :
+  data?.tipo === 'libre'   ? '#1D9E75' :
+  (esHoy ? (d ? '#1a1a3e' : '#f0f4ff') : card), cursor:data?'pointer':'default'
                 }}>
-                  <span style={{ fontSize:14, fontWeight:esHoy?700:400, color:esHoy?'#4e7fff':text }}>{dia}</span>
-                  {data && <div style={{ width:6, height:6, borderRadius:3, background:colorTipo(data.tipo), marginTop:2 }} />}
+                  <span style={{ fontSize:14, fontWeight:esHoy?700:400, color:data ? '#fff' : (esHoy ? '#4e7fff' : text) }}>{dia}</span>
+                  {data && (
+  <span style={{
+    fontSize:9,
+    fontWeight:700,
+    color:'#fff',
+    marginTop:2
+  }}>
+    {
+      data.tipo === 'vuelo' ? 'VUELO' :
+      data.tipo === 'guardia' ? 'GUA' :
+      data.tipo === 'dl' ? 'D/L' :
+      'OFF'
+    }
+  </span>
+)}
                   {data?.tipo==='vuelo' && <span style={{ fontSize:9, color:'#7F77DD' }}>{data.flights.length}✈</span>}
                 </div>
               )
             })}
           </div>
           <div style={{ display:'flex', justifyContent:'center', gap:16, padding:'12px 0', flexWrap:'wrap' }}>
-            {[['#7F77DD','Vuelo'],['#1D9E75','Libre'],['#378ADD','D/L'],['#EF9F27','Guardia']].map(([color,label]) => (
+            {[['#7F77DD','Vuelo'],['#1D9E75','Dia OFF'],['#378ADD','D/L'],['#EF9F27','Guardia']].map(([color,label]) => (
               <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
                 <div style={{ width:10, height:10, borderRadius:5, background:color }} />
                 <span style={{ fontSize:12, color:sub }}>{label}</span>
