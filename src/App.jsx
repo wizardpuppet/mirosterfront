@@ -229,8 +229,12 @@ export default function App() {
     const rosterProcesado = procesarVuelos(data.vuelos || [])
 
     if (Object.keys(rosterProcesado).length > 0) {
-      guardarRosterCache(rosterProcesado)
-      setRoster(rosterProcesado)
+      // Merge: el nuevo roster sobreescribe solo los días que trae; los días pasados que ya no vienen se conservan
+      setRoster(prev => {
+        const merged = { ...prev, ...rosterProcesado }
+        guardarRosterCache(merged)
+        return merged
+      })
       setUltimaSync('Ahora mismo')
     } else {
       alert(
@@ -349,23 +353,14 @@ background:
     ? (d ? '#1a1a3e' : '#f0f4ff')
     : card, cursor:data?'pointer':'default'
                 }}>
-                  <span style={{ fontSize:14, fontWeight:esHoy?700:400, color:data ? '#fff' : (esHoy ? '#4e7fff' : text) }}>{dia}</span>
+                  <span style={{ fontSize:14, fontWeight:esHoy?700:400, color:data ? '#fff' : (esHoy ? '#4e7fff' : text), lineHeight:1 }}>{dia}</span>
                   {data && (
-  <span style={{
-    fontSize:9,
-    fontWeight:700,
-    color:'#fff',
-    marginTop:2
-  }}>
-    {
-      data.tipo === 'vuelo' ? 'VUELO' :
-      data.tipo === 'guardia' ? 'GUA' :
-      data.tipo === 'dl' ? 'D/L' :
-      'OFF'
-    }
-  </span>
-)}
-                  {data?.tipo==='vuelo' && <span style={{ fontSize:9, color:'#7F77DD' }}>{data.flights.length}</span>}
+                    <span style={{ fontSize:8, fontWeight:700, color:'#fff', marginTop:1, lineHeight:1 }}>
+                      {data.tipo === 'vuelo' ? (data.flights.length > 1 ? `${data.flights.length}✈` : '✈') :
+                       data.tipo === 'guardia' ? 'GUA' :
+                       data.tipo === 'dl' ? 'D/L' : 'OFF'}
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -396,13 +391,16 @@ background:
               <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
             </div>
           )}
-          {diasAgenda.map(([key, dayData]) => (
+          {diasAgenda.map(([key, dayData]) => {
+            const esHoyAgenda = dayData.dia === hoy.getDate() && dayData.mes === hoy.getMonth() && anioActual === hoy.getFullYear()
+            return (
             <div key={key}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderLeft:`4px solid ${colorTipo(dayData.tipo)}`, background:d?'#1a1a2e':'#f8f8ff', marginTop:8 }}>
-                <span style={{ fontSize:12, color:sub, width:28 }}>{DIAS_SEMANA_CORTO[dayData.dayName]||dayData.dayName}</span>
-                <span style={{ fontSize:22, fontWeight:700, color:text, width:32 }}>{dayData.dia}</span>
-                <span style={{ fontSize:12, color:sub, width:28 }}>{MESES_CORTO[MESES_ABREV[dayData.mes]]||''}</span>
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderLeft:`4px solid ${esHoyAgenda ? '#1D9E75' : colorTipo(dayData.tipo)}`, background: esHoyAgenda ? (d?'#0e2e1e':'#e8f7ef') : (d?'#1a1a2e':'#f8f8ff'), marginTop:8 }}>
+                <span style={{ fontSize:12, color: esHoyAgenda ? '#1D9E75' : sub, width:28, fontWeight: esHoyAgenda ? 700 : 400 }}>{DIAS_SEMANA_CORTO[dayData.dayName]||dayData.dayName}</span>
+                <span style={{ fontSize:22, fontWeight:700, color: esHoyAgenda ? '#1D9E75' : text, width:32 }}>{dayData.dia}</span>
+                <span style={{ fontSize:12, color: esHoyAgenda ? '#1D9E75' : sub, width:28 }}>{MESES_CORTO[MESES_ABREV[dayData.mes]]||''}</span>
                 <span style={{ background:colorTipo(dayData.tipo), color:'#fff', borderRadius:12, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
+                {esHoyAgenda && <span style={{ background:'#1D9E75', color:'#fff', borderRadius:12, padding:'2px 8px', fontSize:10, fontWeight:700, marginLeft:4 }}>HOY</span>}
                 {dayData.checkin && <span style={{ marginLeft:'auto', fontSize:11, color:sub }}>CI {dayData.checkin}</span>}
               </div>
               {dayData.flights.map((f,i) => (
@@ -415,11 +413,9 @@ background:
                   <span style={{ fontSize:22, color:sub }}>›</span>
                 </div>
               ))}
-              {dayData.tipo !== 'vuelo' && dayData.flights.length === 0 && (
-                <div style={{ padding:'12px 16px', color:sub, fontSize:13 }}>{labelTipo(dayData.tipo)}</div>
-              )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
