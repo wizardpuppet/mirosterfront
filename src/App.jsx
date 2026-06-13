@@ -497,8 +497,8 @@ background:
                 ))}
 
                 {/* DEBRIEF mismo día */}
-                {dayData.debrief && dayData.tipo !== 'guardia' && (
-                  <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.debrief+'L'} color="#7F77DD" />
+                {dayData.checkout && dayData.tipo !== 'guardia' && (
+                  <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.checkout+'L'} color="#7F77DD" />
                 )}
 
                 {/* Días sin vuelos (OFF, DL, Guardia) — solo una fila descriptiva */}
