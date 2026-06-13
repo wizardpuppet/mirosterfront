@@ -49,7 +49,19 @@ function cargarRosterCache() {
   try {
     const raw = localStorage.getItem('ar_roster')
     if (!raw) return {}
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    // Migración: si las keys no tienen año (ej: "JUN12"), agregarle el año del campo anio del día
+    const migrated = {}
+    for (const [k, v] of Object.entries(parsed)) {
+      if (/^\d{4}-/.test(k)) {
+        migrated[k] = v // ya tiene año, ok
+      } else {
+        // key vieja tipo "JUN12" → nueva "2026-JUN12"
+        const anio = v.anio || new Date().getFullYear()
+        migrated[`${anio}-${k}`] = { ...v, anio }
+      }
+    }
+    return migrated
   } catch {
     return {}
   }
@@ -95,12 +107,35 @@ function BtnCerrar({ onClose, dark }) {
   )
 }
 
+const DIAS_NOMBRE_ES = {MON:'Lun',TUE:'Mar',WED:'Mié',THU:'Jue',FRI:'Vie',SAT:'Sáb',SUN:'Dom'}
+const DIAS_SEMANA_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT']
+
+function sumarUnDia(dia, mesKey, year) {
+  const mesesKeys = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+  const mesIdx = mesesKeys.indexOf(mesKey)
+  const fecha = new Date(year, mesIdx, dia + 1)
+  const diaNext = fecha.getDate()
+  const mesNext = mesesKeys[fecha.getMonth()]
+  const dayNameNext = DIAS_SEMANA_EN[fecha.getDay()]
+  const yearNext = fecha.getFullYear()
+  return { dia: diaNext, mesKey: mesNext, mes: fecha.getMonth(), dayName: dayNameNext, anio: yearNext, key: `${yearNext}-${mesNext}${String(diaNext).padStart(2,'0')}` }
+}
+
+function calcTurn(arr1, dep2) {
+  if (!arr1 || !dep2) return null
+  const [h1,m1] = arr1.split(':').map(Number)
+  const [h2,m2] = dep2.split(':').map(Number)
+  const diff = (h2*60+m2) - (h1*60+m1)
+  if (diff <= 0) return null
+  const h = Math.floor(diff/60), m = diff%60
+  return `${h}h${m>0?String(m).padStart(2,'0')+'m':''}`
+}
+
 function procesarVuelos(vuelos) {
   const days = {}
   const mesesN = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11}
 
   for (const v of vuelos) {
-    // Para actividades sin salida (libre, DL), usar checkin si existe
     const fechaRef = v.salida || v.checkin
     if (!fechaRef) continue
 
@@ -110,11 +145,13 @@ function procesarVuelos(vuelos) {
     const dayName = m[1]
     const dia = parseInt(m[2])
     const mesKey = m[3]
-    const key = `${mesKey}${String(dia).padStart(2,'0')}`
+    // Usar el año que manda el servidor; si no viene, año actual como fallback
+    const anio = v.anio || new Date().getFullYear()
+    const key = `${anio}-${mesKey}${String(dia).padStart(2,'0')}`
     const tipo = v.tipo || 'vuelo'
 
     if (!days[key]) {
-      days[key] = { tipo, dia, mes: mesesN[mesKey], dayName, flights: [], checkin: null, checkout: null }
+      days[key] = { tipo, dia, mes: mesesN[mesKey], anio, dayName, flights: [], checkin: null, checkout: null, debrief: null }
     }
 
     if (tipo === 'vuelo' && days[key].tipo !== 'vuelo') days[key].tipo = 'vuelo'
@@ -131,6 +168,15 @@ function procesarVuelos(vuelos) {
       days[key].flights.push({
         num: v.vuelo, from: v.origen, to: v.destino, dep, arr, crew: v.crew || []
       })
+    }
+  }
+
+  for (const key of Object.keys(days)) {
+    const day = days[key]
+    if (day.flights.length > 1) {
+      for (let i = 1; i < day.flights.length; i++) {
+        day.flights[i].turn = calcTurn(day.flights[i-1].arr, day.flights[i].dep)
+      }
     }
   }
 
@@ -194,10 +240,10 @@ export default function App() {
 
   const primerDia  = new Date(anioActual, mesActual, 1).getDay()
   const diasEnMes  = new Date(anioActual, mesActual + 1, 0).getDate()
-  const getDayData = (dia) => roster[`${MESES_ABREV[mesActual]}${String(dia).padStart(2,'0')}`] || null
+  const getDayData = (dia) => roster[`${anioActual}-${MESES_ABREV[mesActual]}${String(dia).padStart(2,'0')}`] || null
   const diaData    = diaSeleccionado ? getDayData(diaSeleccionado) : null
   const diasAgenda = Object.entries(roster)
-    .filter(([, d]) => d.mes === mesActual)
+    .filter(([, d]) => d.mes === mesActual && d.anio === anioActual)
     .sort((a, b) => a[1].dia - b[1].dia)
 
 
@@ -384,7 +430,7 @@ background:
 
       {/* AGENDA */}
       {vista === 'agenda' && (
-        <div>
+        <div style={{ paddingBottom:24 }}>
           {diasAgenda.length === 0 && (
             <div style={{ textAlign:'center', padding:40, color:sub }}>
               <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
@@ -392,28 +438,79 @@ background:
             </div>
           )}
           {diasAgenda.map(([key, dayData]) => {
-            const esHoyAgenda = dayData.dia === hoy.getDate() && dayData.mes === hoy.getMonth() && anioActual === hoy.getFullYear()
-            return (
-            <div key={key}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderLeft:`4px solid ${esHoyAgenda ? '#1D9E75' : colorTipo(dayData.tipo)}`, background: esHoyAgenda ? (d?'#0e2e1e':'#e8f7ef') : (d?'#1a1a2e':'#f8f8ff'), marginTop:8 }}>
-                <span style={{ fontSize:12, color: esHoyAgenda ? '#1D9E75' : sub, width:28, fontWeight: esHoyAgenda ? 700 : 400 }}>{DIAS_SEMANA_CORTO[dayData.dayName]||dayData.dayName}</span>
-                <span style={{ fontSize:22, fontWeight:700, color: esHoyAgenda ? '#1D9E75' : text, width:32 }}>{dayData.dia}</span>
-                <span style={{ fontSize:12, color: esHoyAgenda ? '#1D9E75' : sub, width:28 }}>{MESES_CORTO[MESES_ABREV[dayData.mes]]||''}</span>
-                <span style={{ background:colorTipo(dayData.tipo), color:'#fff', borderRadius:12, padding:'2px 8px', fontSize:11, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
-                {esHoyAgenda && <span style={{ background:'#1D9E75', color:'#fff', borderRadius:12, padding:'2px 8px', fontSize:10, fontWeight:700, marginLeft:4 }}>HOY</span>}
-                {dayData.checkin && <span style={{ marginLeft:'auto', fontSize:11, color:sub }}>CI {dayData.checkin}</span>}
-              </div>
-              {dayData.flights.map((f,i) => (
-                <div key={i} onClick={() => abrirVuelo(f, dayData)} style={{ display:'flex', alignItems:'center', padding:'12px 16px', borderBottom:`1px solid ${border}`, cursor:'pointer', background:card }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:'#7F77DD' }}>{f.num}</div>
-                    <div style={{ fontSize:15, fontWeight:500, color:text }}>{f.from} — {f.to}</div>
-                  </div>
-                  <div style={{ marginRight:8 }}><div style={{ fontSize:13, color:sub }}>{f.dep} - {f.arr}</div></div>
-                  <span style={{ fontSize:22, color:sub }}>›</span>
+            const esHoyAgenda = dayData.dia === hoy.getDate() && dayData.mes === hoy.getMonth() && (dayData.anio || anioActual) === hoy.getFullYear()
+            const colorDia = esHoyAgenda ? '#1D9E75' : colorTipo(dayData.tipo)
+
+            // Fila de evento en la agenda
+            const FilaEvento = ({ icono, titulo, subtitulo, horario, onClick, color }) => (
+              <div onClick={onClick} style={{ display:'flex', alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${border}`, background:card, cursor: onClick?'pointer':'default', gap:12 }}>
+                <div style={{ width:32, height:32, borderRadius:16, background: d?'#2a2a3e':'#f0f0f8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:16 }}>{icono}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:14, fontWeight:600, color: color||text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>
+                  {subtitulo && <div style={{ fontSize:11, color:sub, marginTop:1 }}>{subtitulo}</div>}
                 </div>
-              ))}
-            </div>
+                <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+                  {horario && <span style={{ fontSize:12, fontWeight:600, color:sub }}>{horario}</span>}
+                  {onClick && <span style={{ fontSize:18, color:sub }}>›</span>}
+                </div>
+              </div>
+            )
+
+            return (
+              <div key={key} style={{ marginTop:10 }}>
+                {/* Header del día — estilo de la foto: fondo semitransparente con color del tipo */}
+                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 16px', background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (d?'#1a1a2e':'#ebebf5'), borderLeft:`3px solid ${colorDia}` }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>
+                    {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date(dayData.anio||anioActual, dayData.mes, dayData.dia).getDay()]}
+                  </span>
+                  <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>
+                    {dayData.dia} {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][dayData.mes]} {dayData.anio||anioActual}
+                  </span>
+                  {esHoyAgenda && (
+                    <span style={{ marginLeft:4, background:'#1D9E75', color:'#fff', borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>HOY</span>
+                  )}
+                  {!esHoyAgenda && (
+                    <span style={{ marginLeft:4, background:colorDia+'33', color:colorDia, borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
+                  )}
+                </div>
+                {/* REPORT */}
+                {dayData.checkin && dayData.tipo !== 'guardia' && (
+                  <FilaEvento icono="🕐" titulo="REPORT" subtitulo={dayData.flights[0]?.from || ''} horario={dayData.checkin+'L'} />
+                )}
+
+                {/* Vuelos */}
+                {dayData.flights.map((f,i) => (
+                  <div key={i}>
+                    {f.turn && (
+                      <div style={{ display:'flex', alignItems:'center', padding:'4px 16px 4px 60px', background: d?'#13132a':'#f4f4fc', borderBottom:`1px solid ${border}` }}>
+                        <span style={{ fontSize:11, color:'#7F77DD' }}>⏱ turn {f.turn}</span>
+                      </div>
+                    )}
+                    <FilaEvento
+                      icono="✈️"
+                      titulo={`${f.from} — ${f.to}`}
+                      subtitulo={`${f.num}${f.turn ? ' · turn '+f.turn : ''}`}
+                      horario={`${f.dep}L – ${f.arr}L`}
+                      onClick={() => abrirVuelo(f, dayData)}
+                    />
+                  </div>
+                ))}
+
+                {/* DEBRIEF mismo día */}
+                {dayData.debrief && dayData.tipo !== 'guardia' && (
+                  <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.debrief+'L'} color="#7F77DD" />
+                )}
+
+                {/* Días sin vuelos (OFF, DL, Guardia) — solo una fila descriptiva */}
+                {dayData.flights.length === 0 && (
+                  <FilaEvento
+                    icono={dayData.tipo==='libre'?'🏠': dayData.tipo==='dl'?'📋': dayData.tipo==='guardia'?'🛡️':'📅'}
+                    titulo={labelTipo(dayData.tipo)}
+                    subtitulo={dayData.tipo==='dl'?'Disponibilidad local': dayData.tipo==='guardia'?'Guardia activa': 'Día libre'}
+                    horario={null}
+                  />
+                )}
+              </div>
             )
           })}
         </div>
