@@ -212,7 +212,7 @@ export default function App() {
 
   const guardarConfig = () => {
     setUsuario(usuarioEdit)
-    setClaveEdit(clave)
+    setClaveEdit(claveEdit)
     localStorage.setItem('ar_usuario', usuarioEdit)
     localStorage.setItem('ar_clave', claveEdit)
     setGuardado(true)
@@ -313,20 +313,39 @@ export default function App() {
 
   return (
     <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text, overflowX:'hidden' }}>
+      
+      {/* INYECCIÓN DEL ESTILO CSS DEL SPINNER (RUEDITA GIRATORIA) */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .loading-spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid transparent;
+          border-top-color: currentColor;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          display: inline-block;
+        }
+      `}</style>
 
-      {/* HEADER */}
-      <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100 }}>
-        <div>
-          <span style={{ fontSize:18, fontWeight:700, color:text }}>✈️ Mi Programación</span>
+      {/* HEADER ADAPTADO PARA MOBILE Y BOTONERA COMPACTA */}
+      <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100, gap:8 }}>
+        <div style={{ minWidth: 0, flexShrink: 1 }}>
+          <span style={{ fontSize:16, fontWeight:700, color:text, whiteSpace:'nowrap' }}>✈️ Mi Roster</span>
           {ultimaSync && tieneRoster && (
-            <div style={{ fontSize:11, color:sub, marginTop:1 }}>🔄 {ultimaSync}</div>
+            <div style={{ fontSize:10, color:sub, marginTop:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{ultimaSync}</div>
           )}
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>
+        
+        {/* Contenedor derecho agrupado con tamaño fijo ajustable */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink: 0 }}>
+          <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>
             {d?'☀️':'🌙'}
           </button>
-          <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>⚙️</button>
+          <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>⚙️</button>
           
           <button 
             onClick={exportarA_PDF} 
@@ -336,18 +355,46 @@ export default function App() {
               color: '#fff', 
               border: 'none', 
               borderRadius: 8, 
-              padding: '8px 14px', 
-              fontSize: 13, 
+              padding: '0 10px', 
+              height: 34,
+              fontSize: 12, 
               fontWeight: 700, 
               cursor: tieneRoster ? 'pointer' : 'not-allowed',
-              opacity: exportingPdf || !tieneRoster ? 0.6 : 1
+              opacity: exportingPdf || !tieneRoster ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
             }}
           >
-            {exportingPdf ? '⏳ PDF...' : '📥 Imprimir PDF'}
+            {exportingPdf ? <span className="loading-spinner" /> : '📥 PDF'}
           </button>
 
-          <button onClick={sincronizar} disabled={loading} style={{ background:d?'#2a2a3e':'#f0f0f0', color:text, border:`1px solid ${border}`, borderRadius:8, padding:'8px 16px', fontWeight:600, fontSize:13, cursor:'pointer', opacity:loading?0.7:1 }}>
-            {loading?'...':'⟳ SYNC'}
+          <button 
+            onClick={sincronizar} 
+            disabled={loading} 
+            style={{ 
+              background: loading ? (d?'#2a2a3e':'#e0e0e0') : '#1D9E75', 
+              color: loading ? sub : '#fff', 
+              border: 'none', 
+              borderRadius: 8, 
+              padding: '0 12px', 
+              height: 34,
+              fontWeight: 700, 
+              fontSize: 12, 
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {loading ? (
+              <>
+                <span className="loading-spinner" style={{ color: d ? '#888' : '#555' }} />
+                <span>SYNC</span>
+              </>
+            ) : (
+              '⟳ SYNC'
+            )}
           </button>
         </div>
       </div>
@@ -425,7 +472,7 @@ export default function App() {
           </div>
         )}
 
-        {/* AGENDA MOBILE TOTALMENTE RESTAURADA */}
+        {/* AGENDA MOBILE */}
         {vista === 'agenda' && (
           <div style={{ paddingBottom:24 }}>
             {diasAgenda.length === 0 && (
@@ -520,7 +567,7 @@ export default function App() {
         )}
       </div>
 
-      {/* ─── CONTENEDOR EXCLUSIVO PARA IMPRESIÓN (OCULTO EN COMPLETO) ─── */}
+      {/* ─── CONTENEDOR EXCLUSIVO PARA IMPRESIÓN (OCULTO) ─── */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <div ref={printablePdfRef} style={{ width: '280mm', minHeight: '195mm', boxSizing: 'border-box', padding: '12px', background: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #003087', paddingBottom: '6px', marginBottom: '10px' }}>
