@@ -212,7 +212,7 @@ export default function App() {
 
   const guardarConfig = () => {
     setUsuario(usuarioEdit)
-    setClaveEdit(claveEdit)
+    setClave(claveEdit)
     localStorage.setItem('ar_usuario', usuarioEdit)
     localStorage.setItem('ar_clave', claveEdit)
     setGuardado(true)
@@ -279,7 +279,7 @@ export default function App() {
     setExportingPdf(true)
 
     const opciones = {
-      margin:       [8, 8, 8, 8],
+      margin:       [4, 6, 4, 6],
       filename:     `Roster_Fridge_${MESES[mesActual]}_${anioActual}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2.5, useCORS: true, logging: false },
@@ -314,7 +314,6 @@ export default function App() {
   return (
     <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text, overflowX:'hidden' }}>
       
-      {/* INYECCIÓN DEL ESTILO CSS DEL SPINNER (RUEDITA GIRATORIA) */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -331,7 +330,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* HEADER ADAPTADO PARA MOBILE Y BOTONERA COMPACTA */}
+      {/* HEADER ADAPTADO PARA MOBILE */}
       <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100, gap:8 }}>
         <div style={{ minWidth: 0, flexShrink: 1 }}>
           <span style={{ fontSize:16, fontWeight:700, color:text, whiteSpace:'nowrap' }}>✈️ Mi Roster</span>
@@ -340,7 +339,6 @@ export default function App() {
           )}
         </div>
         
-        {/* Contenedor derecho agrupado con tamaño fijo ajustable */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink: 0 }}>
           <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>
             {d?'☀️':'🌙'}
@@ -469,6 +467,11 @@ export default function App() {
                 )
               })}
             </div>
+
+            {/* AVISO BETA EN LA APP */}
+            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:11, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
+              ⚠️ Por favor chequear información con el roster original. Aplicación en BETA.
+            </div>
           </div>
         )}
 
@@ -548,7 +551,7 @@ export default function App() {
                     </div>
                   ))}
 
-                  {dayData.checkout && dayData.tipo !== 'vuelo' === false && (
+                  {dayData.checkout && dayData.tipo === 'vuelo' && (
                     <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.checkout+'L'} color={yaPasoAgenda ? null : '#7F77DD'} />
                   )}
 
@@ -567,89 +570,101 @@ export default function App() {
         )}
       </div>
 
-      {/* ─── CONTENEDOR EXCLUSIVO PARA IMPRESIÓN (OCULTO) ─── */}
+      {/* ─── CONTENEDOR EXCLUSIVO PARA IMPRESIÓN (OPTIMIZADO EN 1 HOJA A4) ─── */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-        <div ref={printablePdfRef} style={{ width: '280mm', minHeight: '195mm', boxSizing: 'border-box', padding: '12px', background: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #003087', paddingBottom: '6px', marginBottom: '10px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#003087', letterSpacing: '-0.5px' }}>PROGRAMACION DE VUELOS</h1>
-              <div style={{ fontSize: '12px', color: '#333', marginTop: '2px', fontWeight: 'bold' }}>Tripulante Legajo: {usuario || '-------'}</div>
+        <div ref={printablePdfRef} style={{ width: '284mm', height: '198mm', boxSizing: 'border-box', padding: '10px 12px', background: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          
+          <div>
+            {/* Header del Reporte */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #003087', paddingBottom: '4px', marginBottom: '8px' }}>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#003087', letterSpacing: '-0.5px' }}>PROGRAMACIÓN DE VUELOS</h1>
+                <div style={{ fontSize: '11px', color: '#333', marginTop: '1px', fontWeight: 'bold' }}>Tripulante Legajo: {usuario || '-------'}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#003087' }}>{MESES[mesActual].toUpperCase()} {anioActual}</h2>
+                <span style={{ fontSize: '9px', color: '#666' }}>Generado: {new Date().toLocaleDateString()}</span>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#003087' }}>{MESES[mesActual].toUpperCase()} {anioActual}</h2>
-              <span style={{ fontSize: '10px', color: '#666' }}>Generado: {new Date().toLocaleDateString()}</span>
+
+            {/* Días de la semana */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', background: '#f0f4f8', textAlign: 'center', fontWeight: 'bold', fontSize: '11px' }}>
+              {['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'].map(d => (
+                <div key={d} style={{ padding: '5px 0', borderRight: '1px solid #000' }}>{d}</div>
+              ))}
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid #000', background: '#f0f4f8', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
-            {['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].map(d => (
-              <div key={d} style={{ padding: '6px 0', borderRight: '1px solid #000' }}>{d}</div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderLeft: '1px solid #000', borderBottom: '1px solid #000', gap: '0px' }}>
-            {Array(primerDia === 0 ? 6 : primerDia - 1).fill(null).map((_, i) => (
-              <div key={`pdf-e-${i}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: '#fafafa', height: '32mm' }} />
-            ))}
-            
-            {Array(diasEnMes).fill(null).map((_, i) => {
-              const dia = i + 1
-              const data = getDayData(dia)
+            {/* Grilla de días */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderLeft: '1px solid #000', borderBottom: '1px solid #000', gap: '0px' }}>
+              {Array(primerDia === 0 ? 6 : primerDia - 1).fill(null).map((_, i) => (
+                <div key={`pdf-e-${i}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: '#fafafa', height: '28mm' }} />
+              ))}
               
-              let bgCelda = '#ffffff'
-              if (data?.tipo === 'libre') bgCelda = '#e2f4e9'
-              else if (data?.tipo === 'dl') bgCelda = '#e3f2fd'
-              else if (data?.tipo === 'guardia') bgCelda = '#fff3e0'
-              else if (data?.tipo === 'vuelo') bgCelda = '#f3e5f5'
+              {Array(diasEnMes).fill(null).map((_, i) => {
+                const dia = i + 1
+                const data = getDayData(dia)
+                
+                let bgCelda = '#ffffff'
+                if (data?.tipo === 'libre') bgCelda = '#e2f4e9'
+                else if (data?.tipo === 'dl') bgCelda = '#e3f2fd'
+                else if (data?.tipo === 'guardia') bgCelda = '#fff3e0'
+                else if (data?.tipo === 'vuelo') bgCelda = '#f3e5f5'
 
-              return (
-                <div key={`pdf-${dia}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: bgCelda, height: '32mm', boxSizing: 'border-box', padding: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{dia}</span>
-                    {data && data.tipo !== 'vuelo' && (
-                      <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' }}>
-                        {data.tipo === 'guardia' ? 'STANDBY' : data.tipo === 'dl' ? 'D. LIBRE' : 'OFF'}
-                      </span>
-                    )}
-                  </div>
+                return (
+                  <div key={`pdf-${dia}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: bgCelda, height: '28mm', boxSizing: 'border-box', padding: '3px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{dia}</span>
+                      {data && data.tipo !== 'vuelo' && (
+                        <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#444' }}>
+                          {data.tipo === 'guardia' ? 'STANDBY' : data.tipo === 'dl' ? 'D. LIBRE' : 'OFF'}
+                        </span>
+                      )}
+                    </div>
 
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontSize: '9px', lineHeight: '1.1', whiteSpace: 'pre-line' }}>
-                    {data ? (
-                      data.tipo === 'vuelo' ? (
-                        <>
-                          {data.checkin && (
-                            <div style={{ fontWeight: 'bold', color: '#003087', marginBottom: '2px' }}>
-                              {data.checkin} Report
-                            </div>
-                          )}
-                          {data.flights.map((f, fIdx) => (
-                            <div key={fIdx} style={{ margin: '1px 0', fontSize: '8.5px' }}>
-                              <span style={{ fontWeight: 'bold' }}>{f.dep}-{f.arr}</span> {f.from}-{f.to} <span style={{color:'#555'}}>({f.num})</span>
-                            </div>
-                          ))}
-                          {data.checkout && (
-                            <div style={{ fontWeight: 'bold', color: '#d32f2f', marginTop: 'auto', paddingTop: '2px' }}>
-                              {data.checkout} Debrief
-                            </div>
-                          )}
-                        </>
-                      ) : data.tipo === 'guardia' ? (
-                        <div style={{ color: '#e65100', fontWeight: 'bold', fontStyle: 'italic', marginTop: '4px' }}>
-                          00:01-23:59 GUA Active
-                        </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontSize: '8px', lineHeight: '1.1', whiteSpace: 'pre-line', marginTop: '2px' }}>
+                      {data ? (
+                        data.tipo === 'vuelo' ? (
+                          <>
+                            {data.checkin && (
+                              <div style={{ fontWeight: 'bold', color: '#003087', fontSize: '7.5px' }}>
+                                {data.checkin} Report
+                              </div>
+                            )}
+                            {data.flights.map((f, fIdx) => (
+                              <div key={fIdx} style={{ margin: '1px 0', fontSize: '7.5px' }}>
+                                <span style={{ fontWeight: 'bold' }}>{f.dep}-{f.arr}</span> {f.from}-{f.to}
+                              </div>
+                            ))}
+                            {data.checkout && (
+                              <div style={{ fontWeight: 'bold', color: '#d32f2f', marginTop: 'auto', fontSize: '7.5px' }}>
+                                {data.checkout} Debrief
+                              </div>
+                            )}
+                          </>
+                        ) : data.tipo === 'guardia' ? (
+                          <div style={{ color: '#e65100', fontWeight: 'bold', fontStyle: 'italic', marginTop: '2px', fontSize: '7.5px' }}>
+                            00:01-23:59 GUA Active
+                          </div>
+                        ) : (
+                          <div style={{ color: '#2e7d32', fontStyle: 'italic', marginTop: '4px', textAlign: 'center', fontSize: '9px', fontWeight: '500' }}>
+                            {data.tipo === 'dl' ? 'Día Libre - D/L' : 'Día Off'}
+                          </div>
+                        )
                       ) : (
-                        <div style={{ color: '#2e7d32', fontStyle: 'italic', marginTop: '8px', textAlign: 'center', fontSize: '10px' }}>
-                          {data.tipo === 'dl' ? 'Día Libre - D/L' : 'Día Off'}
-                        </div>
-                      )
-                    ) : (
-                      <span style={{ color: '#ccc', fontStyle: 'italic' }}>Sin Actividad</span>
-                    )}
+                        <span style={{ color: '#bbb', fontStyle: 'italic', fontSize: '8px' }}>Sin Actividad</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
+
+          {/* NOTA AL PIE DEL PDF */}
+          <div style={{ textAlign: 'center', fontSize: '9px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
+            Por favor chequear información con el roster original. Aplicación en BETA.
+          </div>
+
         </div>
       </div>
 
