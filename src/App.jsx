@@ -506,7 +506,7 @@ background:
                   <FilaEvento
                     icono={dayData.tipo==='libre'?'🏠': dayData.tipo==='dl'?'📋': dayData.tipo==='guardia'?'🛡️':'📅'}
                     titulo={labelTipo(dayData.tipo)}
-                    subtitulo={dayData.tipo==='dl'?'Disponibilidad local': dayData.tipo==='guardia'?'Guardia activa': 'Día libre'}
+                    subtitulo={dayData.tipo==='dl'?'Día Libre': dayData.tipo==='guardia'?'Guardia activa': 'Día Off'}
                     horario={null}
                   />
                 )}
@@ -568,7 +568,7 @@ background:
           ))}
           {diaData?.tipo !== 'vuelo' && (
             <div style={{ textAlign:'center', padding:20, color:sub, fontSize:14 }}>
-              {diaData?.tipo === 'guardia' ? '🟡 Día de guardia' : diaData?.tipo === 'dl' ? '🔵 Día libre D/L' : '🟢 Día libre'}
+              {diaData?.tipo === 'guardia' ? '🟡 Guardia' : diaData?.tipo === 'dl' ? '🔵 Día Libre D/L' : '🟢 Día Off'}
             </div>
           )}
           <BtnCerrar onClose={() => setDiaSeleccionado(null)} dark={d} />
