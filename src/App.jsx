@@ -181,7 +181,7 @@ export default function App() {
   const [guardado, setGuardado]       = useState(false)
 
   const hoyRef = useRef(null)
-  const navbarRef = useRef(null)
+  const agendaScrollRef = useRef(null)
   const printablePdfRef = useRef(null)
 
   useEffect(() => {
@@ -190,16 +190,14 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (vista === 'agenda' && hoyRef.current) {
+    if (vista === 'agenda' && hoyRef.current && agendaScrollRef.current) {
       setTimeout(() => {
-        // Cálculo manual exacto para que frene abajo del bloque fijo superior
-        const navHeight = navbarRef.current ? navbarRef.current.offsetHeight : 140
-        const elementPosition = hoyRef.current.getBoundingClientRect().top + window.pageYOffset
-        window.scrollTo({
-          top: elementPosition - navHeight,
+        // Al usar un contenedor con scroll propio, el offsetTop es exacto y no se rompe jamás
+        agendaScrollRef.current.scrollTo({
+          top: hoyRef.current.offsetTop - 10,
           behavior: 'smooth'
         })
-      }, 150)
+      }, 100)
     }
   }, [vista])
 
@@ -319,7 +317,7 @@ export default function App() {
   const tieneRoster = Object.keys(roster).length > 0
 
   return (
-    <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text, overflowX:'hidden' }}>
+    <div style={{ height:'100vh', display:'flex', flexDirection:'column', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text, overflow:'hidden' }}>
       
       <style>{`
         @keyframes spin {
@@ -337,8 +335,8 @@ export default function App() {
         }
       `}</style>
 
-      {/* CONTENEDOR UNIFICADO EN ULTRA-STICKY: Congela todo el bloque de navegación arriba */}
-      <div ref={navbarRef} style={{ position: 'sticky', top: 0, zIndex: 110, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+      {/* BLOQUE SUPERIOR FIJO SÓLIDO (No compite con scrolls globales de pantalla móvil) */}
+      <div style={{ flexShrink: 0, zIndex: 110, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         
         {/* HEADER */}
         <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
@@ -407,7 +405,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* SOLAPAS: CALENDARIO / AGENDA */}
+        {/* SOLAPAS */}
         <div style={{ padding:'12px 16px 8px', background:card, borderBottom:`1px solid ${border}` }}>
           <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, maxWidth:300 }}>
             {['calendario','agenda'].map(v => (
@@ -422,7 +420,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* FILA DEL MES ACTUAL Y FLECHAS */}
+        {/* CONTROLES DE MES */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 24px', background:card, borderBottom:`1px solid ${border}` }}>
           <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
             style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer', padding:'0 10px' }}>‹</button>
@@ -435,16 +433,17 @@ export default function App() {
 
       {/* BANNER OFFLINE */}
       {tieneRoster && !navigator.onLine && (
-        <div style={{ background:'#EF9F27', color:'#fff', fontSize:12, textAlign:'center', padding:'6px 16px' }}>
+        <div style={{ flexShrink:0, background:'#EF9F27', color:'#fff', fontSize:12, textAlign:'center', padding:'6px 16px' }}>
           📴 Sin conexión — mostrando programación guardada
         </div>
       )}
 
-      {/* CONTENIDO INTERACTIVO MOBILE */}
-      <div style={{ marginTop: 4 }}>
-        {/* CALENDARIO MOBILE */}
+      {/* CONTENEDOR DE CONTENIDO INTERACTIVO MOBILE */}
+      <div style={{ flex: 1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        
+        {/* CALENDARIO MOBILE (SCROLLABLE INDEPENDIENTE) */}
         {vista === 'calendario' && (
-          <div style={{ padding:'0 8px', marginTop: 10 }}>
+          <div style={{ flex: 1, overflowY:'auto', padding:'10px 8px 24px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', marginBottom:4 }}>
               {DIAS_SEMANA.map(ds => <div key={ds} style={{ textAlign:'center', fontSize:11, color:sub, padding:'4px 0' }}>{ds}</div>)}
             </div>
@@ -480,16 +479,15 @@ export default function App() {
               })}
             </div>
 
-            {/* AVISO BETA EN LA APP */}
-            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:15, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
+            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:16, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
               ⚠️ Por favor chequear información con el roster original. Aplicación en BETA.
             </div>
           </div>
         )}
 
-        {/* AGENDA MOBILE */}
+        {/* AGENDA MOBILE (SCROLLABLE TOTALMENTE PROPIO) */}
         {vista === 'agenda' && (
-          <div style={{ paddingBottom:24 }}>
+          <div ref={agendaScrollRef} style={{ flex: 1, overflowY:'auto', paddingBottom:36 }}>
             {diasAgenda.length === 0 && (
               <div style={{ textAlign:'center', padding:40, color:sub }}>
                 <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
@@ -673,7 +671,7 @@ export default function App() {
           </div>
 
           {/* NOTA AL PIE DEL PDF */}
-          <div style={{ textAlign: 'center', fontSize: '15px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
+          <div style={{ textAlign: 'center', fontSize: '16px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
             Por favor chequear información con el roster original. Aplicación en BETA.
           </div>
 
