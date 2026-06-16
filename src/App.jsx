@@ -191,7 +191,8 @@ export default function App() {
   useEffect(() => {
     if (vista === 'agenda' && hoyRef.current) {
       setTimeout(() => {
-        hoyRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // block: 'start' evita que empuje el encabezado fixed hacia arriba
+        hoyRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 150)
     }
   }, [vista])
@@ -330,71 +331,100 @@ export default function App() {
         }
       `}</style>
 
-      {/* HEADER ADAPTADO PARA MOBILE */}
-      <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100, gap:8 }}>
-        <div style={{ minWidth: 0, flexShrink: 1 }}>
-          <span style={{ fontSize:16, fontWeight:700, color:text, whiteSpace:'nowrap' }}>✈️ Mi Roster</span>
-          {ultimaSync && tieneRoster && (
-            <div style={{ fontSize:10, color:sub, marginTop:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{ultimaSync}</div>
-          )}
-        </div>
+      {/* CONTENEDOR AGRUPADO STICKY: Mantiene toda la navegación junta siempre visible arriba */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
         
-        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink: 0 }}>
-          <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>
-            {d?'☀️':'🌙'}
-          </button>
-          <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>⚙️</button>
-          
-          <button 
-            onClick={exportarA_PDF} 
-            disabled={exportingPdf || !tieneRoster} 
-            style={{ 
-              background: '#003087', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 8, 
-              padding: '0 10px', 
-              height: 34,
-              fontSize: 12, 
-              fontWeight: 700, 
-              cursor: tieneRoster ? 'pointer' : 'not-allowed',
-              opacity: exportingPdf || !tieneRoster ? 0.6 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
-            }}
-          >
-            {exportingPdf ? <span className="loading-spinner" /> : '📥 PDF'}
-          </button>
-
-          <button 
-            onClick={sincronizar} 
-            disabled={loading} 
-            style={{ 
-              background: loading ? (d?'#2a2a3e':'#e0e0e0') : '#1D9E75', 
-              color: loading ? sub : '#fff', 
-              border: 'none', 
-              borderRadius: 8, 
-              padding: '0 12px', 
-              height: 34,
-              fontWeight: 700, 
-              fontSize: 12, 
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6
-            }}
-          >
-            {loading ? (
-              <>
-                <span className="loading-spinner" style={{ color: d ? '#888' : '#555' }} />
-                <span>SYNC</span>
-              </>
-            ) : (
-              '⟳ SYNC'
+        {/* HEADER */}
+        <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+          <div style={{ minWidth: 0, flexShrink: 1 }}>
+            <span style={{ fontSize:16, fontWeight:700, color:text, whiteSpace:'nowrap' }}>✈️ Mi Roster</span>
+            {ultimaSync && tieneRoster && (
+              <div style={{ fontSize:10, color:sub, marginTop:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{ultimaSync}</div>
             )}
-          </button>
+          </div>
+          
+          <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink: 0 }}>
+            <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>
+              {d?'☀️':'🌙'}
+            </button>
+            <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, cursor:'pointer' }}>⚙️</button>
+            
+            <button 
+              onClick={exportarA_PDF} 
+              disabled={exportingPdf || !tieneRoster} 
+              style={{ 
+                background: '#003087', 
+                color: '#fff', 
+                border: 'none', 
+                borderRadius: 8, 
+                padding: '0 10px', 
+                height: 34,
+                fontSize: 12, 
+                fontWeight: 700, 
+                cursor: tieneRoster ? 'pointer' : 'not-allowed',
+                opacity: exportingPdf || !tieneRoster ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              {exportingPdf ? <span className="loading-spinner" /> : '📥 PDF'}
+            </button>
+
+            <button 
+              onClick={sincronizar} 
+              disabled={loading} 
+              style={{ 
+                background: loading ? (d?'#2a2a3e':'#e0e0e0') : '#1D9E75', 
+                color: loading ? sub : '#fff', 
+                border: 'none', 
+                borderRadius: 8, 
+                padding: '0 12px', 
+                height: 34,
+                fontWeight: 700, 
+                fontSize: 12, 
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              {loading ? (
+                <>
+                  <span className="loading-spinner" style={{ color: d ? '#888' : '#555' }} />
+                  <span>SYNC</span>
+                </>
+              ) : (
+                '⟳ SYNC'
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* TABS (CALENDARIO / AGENDA) */}
+        <div style={{ padding:'12px 16px 8px', background:card, borderBottom:`1px solid ${border}` }}>
+          <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, maxWidth:300 }}>
+            {['calendario','agenda'].map(v => (
+              <button key={v} onClick={() => setVista(v)} style={{
+                flex:1, padding:'7px 0', border:'none', borderRadius:8, cursor:'pointer', fontSize:13,
+                fontWeight:vista===v?700:500,
+                background:vista===v?(d?'#12121e':'#fff'):'transparent',
+                color:vista===v?text:sub,
+                boxShadow:vista===v?'0 1px 4px rgba(0,0,0,0.2)':'none'
+              }}>{v.charAt(0).toUpperCase()+v.slice(1)}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* NAV MES (MES ACTUAL Y ACCIONES DE CAMBIO) */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 24px', background:card, borderBottom:`1px solid ${border}` }}>
+          <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
+            style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer', padding:'0 10px' }}>‹</button>
+          <span style={{ fontWeight:700, fontSize:16, color:text }}>{MESES[mesActual]} {anioActual}</span>
+          <button onClick={() => mesActual===11?(setMesActual(0),setAnioActual(a=>a+1)):setMesActual(m=>m+1)}
+            style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer', padding:'0 10px' }}>›</button>
+        </div>
+
       </div>
 
       {/* BANNER OFFLINE */}
@@ -404,32 +434,8 @@ export default function App() {
         </div>
       )}
 
-      {/* TABS */}
-      <div style={{ padding:'12px 16px 0', background:card, borderBottom:`1px solid ${border}` }}>
-        <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, maxWidth:300 }}>
-          {['calendario','agenda'].map(v => (
-            <button key={v} onClick={() => setVista(v)} style={{
-              flex:1, padding:'7px 0', border:'none', borderRadius:8, cursor:'pointer', fontSize:13,
-              fontWeight:vista===v?700:500,
-              background:vista===v?(d?'#12121e':'#fff'):'transparent',
-              color:vista===v?text:sub,
-              boxShadow:vista===v?'0 1px 4px rgba(0,0,0,0.2)':'none'
-            }}>{v.charAt(0).toUpperCase()+v.slice(1)}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* NAV MES */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 24px', background:card }}>
-        <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
-          style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>‹</button>
-        <span style={{ fontWeight:700, fontSize:16, color:text }}>{MESES[mesActual]} {anioActual}</span>
-        <button onClick={() => mesActual===11?(setMesActual(0),setAnioActual(a=>a+1)):setMesActual(m=>m+1)}
-          style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>›</button>
-      </div>
-
       {/* CONTENIDO INTERACTIVO MOBILE */}
-      <div>
+      <div style={{ marginTop: 4 }}>
         {/* CALENDARIO MOBILE */}
         {vista === 'calendario' && (
           <div style={{ padding:'0 8px', marginTop: 10 }}>
@@ -469,7 +475,7 @@ export default function App() {
             </div>
 
             {/* AVISO BETA EN LA APP */}
-            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:11, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
+            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:14, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
               ⚠️ Por favor chequear información con el roster original. Aplicación en BETA.
             </div>
           </div>
@@ -509,7 +515,8 @@ export default function App() {
               )
 
               return (
-                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>
+                /* scroll-margin-top asegura que deje un margen para que no se pegue abajo del header sticky */
+                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10, scrollMarginTop: '150px' }}>
                   <div style={{ 
                     display:'flex', alignItems:'center', gap:6, padding:'7px 16px', 
                     background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),
@@ -755,7 +762,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              {[flightModal.flight.from, flightModal.flight.to].map(code => (
+              {flightModal.flight.from && flightModal.flight.to && [flightModal.flight.from, flightModal.flight.to].map(code => (
                 <div key={code} style={{ background:d?'#2a2a3e':'#f8f8ff', borderRadius:10, padding:12, marginBottom:8 }}>
                   <div style={{ fontSize:18, fontWeight:700, color:'#003087' }}>{code}</div>
                   <div style={{ fontSize:13, color:sub, marginTop:2 }}>{AEROPUERTOS[code] || 'Aeropuerto'}</div>
