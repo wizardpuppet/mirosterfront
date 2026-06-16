@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-// Importamos la librería para generar el PDF
 import html2pdf from 'html2pdf.js'
 
 const AEROPUERTOS = {
@@ -166,7 +165,7 @@ export default function App() {
   const [clave, setClave]     = useState(() => localStorage.getItem('ar_clave') || '')
   const [dark, setDark]       = useState(() => localStorage.getItem('ar_dark') === 'true')
   const [loading, setLoading] = useState(false)
-  const [exportingPdf, setExportingPdf] = useState(false) // Estado para deshabilitar mientras descarga
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [roster, setRoster]   = useState(() => cargarRosterCache())
   const [ultimaSync, setUltimaSync] = useState(() => tiempoDesdeSync())
   const [vista, setVista]     = useState('calendario')
@@ -182,8 +181,8 @@ export default function App() {
   const [guardado, setGuardado]       = useState(false)
 
   const hoyRef = useRef(null)
-  // Referencia al contenedor que queremos meter en el archivo PDF
-  const pdfAreaRef = useRef(null)
+  // Referencia exclusiva para capturar el cuadro de heladera oculto
+  const printablePdfRef = useRef(null)
 
   useEffect(() => {
     const interval = setInterval(() => setUltimaSync(tiempoDesdeSync()), 60000)
@@ -274,31 +273,28 @@ export default function App() {
     }
   }
 
-  // Función encargada de compilar y descargar el PDF
+  // Configuración del PDF tipo Fridge (Apaisado, nítido y con todo el texto adentro)
   const exportarA_PDF = () => {
-    const elemento = pdfAreaRef.current
+    const elemento = printablePdfRef.current
     if (!elemento) return
 
     setExportingPdf(true)
 
-    // Opciones del renderizador html2pdf
     const opciones = {
-      margin:       [10, 10, 10, 10], // Margen superior, izquierdo, inferior, derecho en mm
-      filename:     `Roster_${MESES[mesActual]}_${anioActual}.pdf`,
+      margin:       [8, 8, 8, 8],
+      filename:     `Roster_Fridge_${MESES[mesActual]}_${anioActual}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, logging: false }, // Mayor escala = mejor nitidez de texto
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' } // Formato A4 estándar vertical
+      html2canvas:  { scale: 2.5, useCORS: true, logging: false }, // Muy alta resolución para que se lea la letra chica
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // APASADO como el original de AR
     }
 
     html2pdf()
       .from(elemento)
       .set(opciones)
       .save()
-      .then(() => {
-        setExportingPdf(false)
-      })
-      .catch((error) => {
-        console.error('Error al exportar PDF:', error)
+      .then(() => setExportingPdf(false))
+      .catch((err) => {
+        console.error(err)
         setExportingPdf(false)
       })
   }
@@ -320,7 +316,7 @@ export default function App() {
   return (
     <div style={{ minHeight:'100vh', background:bg, fontFamily:"'Segoe UI', Arial, sans-serif", color:text, overflowX:'hidden' }}>
 
-      {/* HEADER */}
+      {/* HEADER PANTALLA */}
       <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100 }}>
         <div>
           <span style={{ fontSize:18, fontWeight:700, color:text }}>✈️ Mi Programación</span>
@@ -334,27 +330,26 @@ export default function App() {
           </button>
           <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>⚙️</button>
           
-          {/* BOTÓN NUEVO: Exportar PDF */}
           <button 
             onClick={exportarA_PDF} 
             disabled={exportingPdf || !tieneRoster} 
             style={{ 
-              background: d ? '#2a2a3e' : '#f0f0f0', 
-              color: text, 
-              border: `1px solid ${border}`, 
+              background: '#003087', 
+              color: '#fff', 
+              border: 'none', 
               borderRadius: 8, 
-              padding: '8px 12px', 
+              padding: '8px 14px', 
               fontSize: 13, 
-              fontWeight: 600, 
+              fontWeight: 700, 
               cursor: tieneRoster ? 'pointer' : 'not-allowed',
               opacity: exportingPdf || !tieneRoster ? 0.6 : 1
             }}
           >
-            {exportingPdf ? '⏳ PDF...' : '📥 PDF'}
+            {exportingPdf ? '⏳ PDF...' : '📥 Imprimir PDF'}
           </button>
 
-          <button onClick={sincronizar} disabled={loading} style={{ background:'#003087', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, fontSize:13, cursor:'pointer', opacity:loading?0.7:1 }}>
-            {loading?'Cargando...':'⟳ SYNC'}
+          <button onClick={sincronizar} disabled={loading} style={{ background:d?'#2a2a3e':'#f0f0f0', color:text, border:`1px solid ${border}`, borderRadius:8, padding:'8px 16px', fontWeight:600, fontSize:13, cursor:'pointer', opacity:loading?0.7:1 }}>
+            {loading?'...':'⟳ SYNC'}
           </button>
         </div>
       </div>
@@ -366,7 +361,7 @@ export default function App() {
         </div>
       )}
 
-      {/* TABS */}
+      {/* TABS PANTALLA */}
       <div style={{ padding:'12px 16px 0', background:card, borderBottom:`1px solid ${border}` }}>
         <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, maxWidth:300 }}>
           {['calendario','agenda'].map(v => (
@@ -381,7 +376,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* NAV MES */}
+      {/* NAV MES PANTALLA */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 24px', background:card }}>
         <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
           style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>‹</button>
@@ -390,26 +385,11 @@ export default function App() {
           style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>›</button>
       </div>
 
-      {/* Encapsulamos la sección interactiva en este div con la referencia `pdfAreaRef`.
-        Todo lo que cambie de mes o de vista (Calendario o Agenda) se reflejará tal cual en el PDF descargado.
-      */}
-      <div ref={pdfAreaRef} style={{ background: bg, minHeight: 'auto', paddingBottom: '10px' }}>
-        
-        {/* TÍTULO INTERNO EXCLUSIVO PARA IMPRESIÓN PDF */}
-        <div className="pdf-header" style={{ padding: '10px 16px', display: 'none', borderBottom: `2px solid ${border}`, marginBottom: '15px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', color: '#003087' }}>✈️ Roster de Vuelo</h2>
-          <div style={{ fontSize: '13px', color: sub }}>Mes: {MESES[mesActual]} {anioActual}</div>
-        </div>
-        {/* Inyectamos estilos nativos para controlar la visibilidad del título arriba en pantallas versus el PDF */}
-        <style>{`
-          @media print {
-            .pdf-header { display: block !important; }
-          }
-        `}</style>
-
-        {/* CALENDARIO */}
+      {/* VISTA INTERACTIVA DEL CELULAR */}
+      <div>
+        {/* CALENDARIO MOBILE */}
         {vista === 'calendario' && (
-          <div style={{ padding:'0 8px' }}>
+          <div style={{ padding:'0 8px', marginTop: 10 }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', marginBottom:4 }}>
               {DIAS_SEMANA.map(ds => <div key={ds} style={{ textAlign:'center', fontSize:11, color:sub, padding:'4px 0' }}>{ds}</div>)}
             </div>
@@ -419,159 +399,190 @@ export default function App() {
                 const dia = i+1
                 const data = getDayData(dia)
                 const esHoy = dia===hoy.getDate() && mesActual===hoy.getMonth() && anioActual===hoy.getFullYear()
-                
                 const diaFecha = new Date(anioActual, mesActual, dia)
-                const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
-                const yaPaso = diaFecha < hoySinHora
+                const yaPaso = diaFecha < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
 
                 let fondoDia = card
-                if (esHoy) {
-                  fondoDia = d ? '#112244' : '#e6f0ff'
-                } else if (data) {
-                  fondoDia = yaPaso ? (d ? '#282830' : '#e0e0e0') : colorTipo(data.tipo)
-                }
+                if (esHoy) fondoDia = d ? '#112244' : '#e6f0ff'
+                else if (data) fondoDia = yaPaso ? (d ? '#282830' : '#e0e0e0') : colorTipo(data.tipo)
 
                 return (
                   <div key={dia} onClick={() => data && setDiaSeleccionado(dia)} style={{
                     aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                     borderRadius:8, 
-                    border: esHoy 
-                      ? '3px solid #0052cc' 
-                      : (data ? `2px solid ${yaPaso ? (d ? '#444' : '#b5b5b5') : colorTipo(data.tipo)}` : `1px solid ${border}`),
-                    background: fondoDia,
-                    cursor:data?'pointer':'default'
+                    border: esHoy ? '3px solid #0052cc' : (data ? `2px solid ${yaPaso ? (d ? '#444' : '#b5b5b5') : colorTipo(data.tipo)}` : `1px solid ${border}`),
+                    background: fondoDia, cursor:data?'pointer':'default'
                   }}>
-                    <span style={{ 
-                      fontSize:14, 
-                      fontWeight:esHoy?800:400, 
-                      color: esHoy ? '#0052cc' : (data ? (yaPaso ? sub : '#fff') : text),
-                      lineHeight:1 
-                    }}>{dia}</span>
+                    <span style={{ fontSize:14, fontWeight:esHoy?800:400, color: esHoy ? '#0052cc' : (data ? (yaPaso ? sub : '#fff') : text) }}>{dia}</span>
                     {data && (
-                      <span style={{ fontSize:8, fontWeight:700, color: yaPaso ? sub : '#fff', marginTop:1, lineHeight:1 }}>
-                        {data.tipo === 'vuelo' ? (data.flights.length > 1 ? `${data.flights.length}✈` : '✈') :
-                         data.tipo === 'guardia' ? 'GUA' :
-                         data.tipo === 'dl' ? 'D/L' : 'OFF'}
+                      <span style={{ fontSize:8, fontWeight:700, color: yaPaso ? sub : '#fff', marginTop:1 }}>
+                        {data.tipo === 'vuelo' ? (data.flights.length > 1 ? `${data.flights.length}✈` : '✈') : data.tipo === 'guardia' ? 'GUA' : data.tipo === 'dl' ? 'D/L' : 'OFF'}
                       </span>
                     )}
                   </div>
                 )
               })}
             </div>
-            <div style={{ display:'flex', justifyContent:'center', gap:16, padding:'12px 0', flexWrap:'wrap' }}>
-              {[['#7F77DD','Vuelo'],['#1D9E75','Dia OFF'],['#378ADD','D/L'],['#EF9F27','Guardia']].map(([color,label]) => (
-                <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                  <div style={{ width:10, height:10, borderRadius:5, background:color }} />
-                  <span style={{ fontSize:12, color:sub }}>{label}</span>
-                </div>
-              ))}
-            </div>
-            {!tieneRoster && (
-              <div style={{ textAlign:'center', padding:40, color:sub }}>
-                <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
-                <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* AGENDA */}
+        {/* AGENDA MOBILE */}
         {vista === 'agenda' && (
           <div style={{ paddingBottom:24 }}>
-            {diasAgenda.length === 0 && (
-              <div style={{ textAlign:'center', padding:40, color:sub }}>
-                <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
-                <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
-              </div>
-            )}
             {diasAgenda.map(([key, dayData]) => {
               const esHoyAgenda = dayData.dia === hoy.getDate() && dayData.mes === hoy.getMonth() && (dayData.anio || anioActual) === hoy.getFullYear()
-              
-              const diaFecha = new Date(dayData.anio || anioActual, dayData.mes, dayData.dia)
-              const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
-              const yaPasoAgenda = diaFecha < hoySinHora
-
-              const colorDiaBase = colorTipo(dayData.tipo)
-              const colorDia = yaPasoAgenda ? (d ? '#555' : '#999') : (esHoyAgenda ? '#1D9E75' : colorDiaBase)
-
-              const FilaEvento = ({ icono, titulo, subtitulo, horario, onClick, color }) => (
-                <div onClick={onClick} style={{ 
-                  display:'flex', alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${border}`, 
-                  background:card, cursor: onClick?'pointer':'default', gap:12,
-                  opacity: yaPasoAgenda ? 0.6 : 1 
-                }}>
-                  <div style={{ width:32, height:32, borderRadius:16, background: d?'#2a2a3e':'#f0f0f8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:16, filter: yaPasoAgenda ? 'grayscale(1)' : 'none' }}>{icono}</div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color: yaPasoAgenda ? sub : (color || text), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>
-                    {subtitulo && <div style={{ fontSize:11, color:sub, marginTop:1 }}>{subtitulo}</div>}
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
-                    {horario && <span style={{ fontSize:12, fontWeight:600, color:sub }}>{horario}</span>}
-                    {onClick && <span style={{ fontSize:18, color:sub }}>›</span>}
-                  </div>
-                </div>
-              )
+              const yaPasoAgenda = new Date(dayData.anio || anioActual, dayData.mes, dayData.dia) < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+              const colorDia = yaPasoAgenda ? (d ? '#555' : '#999') : (esHoyAgenda ? '#1D9E75' : colorTipo(dayData.tipo))
 
               return (
                 <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>
-                  <div style={{ 
-                    display:'flex', alignItems:'center', gap:6, padding:'7px 16px', 
-                    background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),
-                    borderLeft:`3px solid ${colorDia}` 
-                  }}>
-                    <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>
-                      {DIAS_SEMANA[new Date(dayData.anio||anioActual, dayData.mes, dayData.dia).getDay()]}
-                    </span>
-                    <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>
-                      {dayData.dia} {MESES_CORTO[MESES_ABREV[dayData.mes]]} {dayData.anio||anioActual}
-                    </span>
-                    {esHoyAgenda && (
-                      <span style={{ marginLeft:4, background:'#1D9E75', color:'#fff', borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>HOY</span>
-                    )}
-                    {!esHoyAgenda && (
-                      <span style={{ marginLeft:4, background:yaPasoAgenda ? (d?'#333':'#ddd') : colorDia+'33', color:colorDia, borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
-                    )}
+                  <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 16px', background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')), borderLeft:`3px solid ${colorDia}` }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>{DIAS_SEMANA[new Date(dayData.anio||anioActual, dayData.mes, dayData.dia).getDay()]} {dayData.dia} {MESES_CORTO[MESES_ABREV[dayData.mes]]}</span>
+                    <span style={{ marginLeft:'auto', background: colorDia+'22', color:colorDia, borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
                   </div>
-
-                  {dayData.checkin && dayData.tipo !== 'guardia' && (
-                    <FilaEvento icono="🕐" titulo="REPORT" subtitulo={dayData.flights[0]?.from || ''} horario={dayData.checkin+'L'} />
-                  )}
-
-                  {dayData.flights.map((f,i) => (
-                    <div key={i}>
-                      {f.turn && (
-                        <div style={{ display:'flex', alignItems:'center', padding:'4px 16px 4px 60px', background: d?'#13132a':'#f4f4fc', borderBottom:`1px solid ${border}`, opacity: yaPasoAgenda ? 0.5 : 1 }}>
-                          <span style={{ fontSize:11, color:'#7F77DD' }}>⏱ turn {f.turn}</span>
-                        </div>
-                      )}
-                      <FilaEvento
-                        icono="✈️"
-                        titulo={`${f.from} — ${f.to}`}
-                        subtitulo={`${f.num}${f.turn ? ' · turn '+f.turn : ''}`}
-                        horario={`${f.dep}L – ${f.arr}L`}
-                        onClick={() => abrirVuelo(f, dayData)}
-                        color={yaPasoAgenda ? null : '#7F77DD'}
-                      />
+                  {dayData.checkin && dayData.tipo !== 'guardia' && <div style={{padding:'8px 16px', fontSize:13, color:sub, background:card}}>🕐 Report: {dayData.checkin}L</div>}
+                  {dayData.flights.map((f,idx) => (
+                    <div key={idx} onClick={() => abrirVuelo(f, dayData)} style={{ display:'flex', justifyContent:'space-between', padding:'12px 16px', background:card, borderBottom:`1px solid ${border}`, cursor:'pointer' }}>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:600 }}>{f.from} — {f.to}</div>
+                        <div style={{ fontSize:11, color:sub }}>{f.num}</div>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:600, color: '#7F77DD' }}>{f.dep}L - {f.arr}L</div>
                     </div>
                   ))}
-
-                  {dayData.checkout && dayData.tipo !== 'guardia' && (
-                    <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.checkout+'L'} color={yaPasoAgenda ? null : '#7F77DD'} />
-                  )}
-
-                  {dayData.flights.length === 0 && (
-                    <FilaEvento
-                      icono={dayData.tipo==='libre'?'🏠': dayData.tipo==='dl'?'📋': dayData.tipo==='guardia'?'🛡️':'📅'}
-                      titulo={labelTipo(dayData.tipo)}
-                      subtitulo={dayData.tipo==='dl'?'Día Libre': dayData.tipo==='guardia'?'Guardia activa': 'Día Off'}
-                      horario={null}
-                    />
-                  )}
+                  {dayData.checkout && dayData.tipo !== 'guardia' && <div style={{padding:'8px 16px', fontSize:13, color:sub, background:card, borderBottom:`1px solid ${border}`}}>🏁 Debrief: {dayData.checkout}L</div>}
                 </div>
               )
             })}
           </div>
         )}
+      </div>
+
+      {/* ─── CONTENEDOR EXCLUSIVO PARA IMPRESIÓN (OCULTO EN PANTALLA) ─── */}
+      {/* Genera exactamente el formato "Fridge" de Aerolíneas usando estilos planos nativos en blanco y negro/escala limpia */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        <div ref={printablePdfRef} style={{ 
+          width: '280mm', 
+          minHeight: '195mm', 
+          boxSizing: 'border-box', 
+          padding: '12px', 
+          background: '#ffffff', 
+          color: '#000000', 
+          fontFamily: 'Arial, sans-serif' 
+        }}>
+          {/* Encabezado del Roster PDF */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #003087', paddingBottom: '6px', marginBottom: '10px' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#003087', letterSpacing: '-0.5px' }}>PROGRAMACION DE VUELOS</h1>
+              <div style={{ fontSize: '12px', color: '#333', marginTop: '2px', fontWeight: 'bold' }}>Tripulante Legajo: {usuario || '-------'}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#003087' }}>{MESES[mesActual].toUpperCase()} {anioActual}</h2>
+              <span style={{ fontSize: '10px', color: '#666' }}>Generado: {new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          {/* Días de la semana del PDF */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', border: '1px solid #000', background: '#f0f4f8', textAlign: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+            {['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].map(d => (
+              <div key={d} style={{ padding: '6px 0', borderRight: '1px solid #000', lastChild: { borderRight: 'none' } }}>{d}</div>
+            ))}
+          </div>
+
+          {/* Grilla de Días de Heladera */}
+          {/* Desplazamos el casillero inicial para emparejar con el formato estándar (Lunes primer día en AR) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderLeft: '1px solid #000', borderBottom: '1px solid #000', gap: '0px' }}>
+            {/* Ajuste de desfasaje para calendario con inicio en Lunes (AR standard) */}
+            {Array(primerDia === 0 ? 6 : primerDia - 1).fill(null).map((_, i) => (
+              <div key={`pdf-e-${i}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: '#fafafa', height: '32mm' }} />
+            ))}
+            
+            {Array(diasEnMes).fill(null).map((_, i) => {
+              const dia = i + 1
+              const data = getDayData(dia)
+              
+              // Determinar color de fondo sutil oficial de fila para el reporte impreso
+              let bgCelda = '#ffffff'
+              if (data?.tipo === 'libre') bgCelda = '#e2f4e9' // Verde tenue
+              else if (data?.tipo === 'dl') bgCelda = '#e3f2fd'  // Azul tenue
+              else if (data?.tipo === 'guardia') bgCelda = '#fff3e0' // Naranja tenue
+              else if (data?.tipo === 'vuelo') bgCelda = '#f3e5f5' // Violeta tenue
+
+              return (
+                <div key={`pdf-${dia}`} style={{ 
+                  borderRight: '1px solid #000', 
+                  borderTop: '1px solid #000', 
+                  background: bgCelda, 
+                  height: '32mm', 
+                  boxSizing: 'border-box',
+                  padding: '4px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  overflow: 'hidden'
+                }}>
+                  {/* Número de Día arriba */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{dia}</span>
+                    {data && data.tipo !== 'vuelo' && (
+                      <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' }}>
+                        {data.tipo === 'guardia' ? 'STANDBY' : data.tipo === 'dl' ? 'D. LIBRE' : 'OFF'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Cuerpo Interno: Datos del Roster Exactos */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontSize: '9px', lineHeight: '1.1', whiteSpace: 'pre-line' }}>
+                    {data ? (
+                      data.tipo === 'vuelo' ? (
+                        <>
+                          {/* Reporte inicial */}
+                          {data.checkin && (
+                            <div style={{ fontWeight: 'bold', color: '#003087', marginBottom: '2px' }}>
+                              {data.checkin} Report
+                            </div>
+                          )}
+                          
+                          {/* Listar tramos */}
+                          {data.flights.map((f, fIdx) => (
+                            <div key={fIdx} style={{ margin: '1px 0', fontSize: '8.5px' }}>
+                              <span style={{ fontWeight: 'bold' }}>{f.dep}-{f.arr}</span> {f.from}-{f.to} <span style={{color:'#555'}}>({f.num})</span>
+                            </div>
+                          ))}
+
+                          {/* Debrief final */}
+                          {data.checkout && (
+                            <div style={{ fontWeight: 'bold', color: '#d32f2f', marginTop: 'auto', paddingTop: '2px' }}>
+                              {data.checkout} Debrief
+                            </div>
+                          )}
+                        </>
+                      ) : data.tipo === 'guardia' ? (
+                        <div style={{ color: '#e65100', fontWeight: 'bold', fontStyle: 'italic', marginTop: '4px' }}>
+                          00:01-23:59 GUA Active
+                        </div>
+                      ) : (
+                        <div style={{ color: '#2e7d32', fontStyle: 'italic', marginTop: '8px', textAlign: 'center', fontSize: '10px' }}>
+                          {data.tipo === 'dl' ? 'D/L Obligatorio' : 'Día Libre Completo'}
+                        </div>
+                      )
+                    ) : (
+                      <span style={{ color: '#ccc', fontStyle: 'italic' }}>Sin Actividad</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Referencias al pié del PDF */}
+          <div style={{ display: 'flex', gap: '20px', marginTop: '12px', fontSize: '9px', color: '#555', borderTop: '1px solid #ccc', paddingTop: '6px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap: '4px' }}><div style={{ width:10, height:10, background:'#f3e5f5', border:'1px solid #000' }}/> Tramo de Vuelo</div>
+            <div style={{ display:'flex', alignItems:'center', gap: '4px' }}><div style={{ width:10, height:10, background:'#e2f4e9', border:'1px solid #000' }}/> Día OFF / Vacaciones</div>
+            <div style={{ display:'flex', alignItems:'center', gap: '4px' }}><div style={{ width:10, height:10, background:'#e3f2fd', border:'1px solid #000' }}/> Franco D/L</div>
+            <div style={{ display:'flex', alignItems:'center', gap: '4px' }}><div style={{ width:10, height:10, background:'#fff3e0', border:'1px solid #000' }}/> Guardia / Standby</div>
+          </div>
+        </div>
       </div>
 
       {/* MODAL CONFIGURACIÓN */}
@@ -610,7 +621,6 @@ export default function App() {
               {diaData.checkout && <span style={{ fontSize:13, color:sub }}>Check-out <strong style={{ color:text }}>{diaData.checkout}</strong></span>}
             </div>
           )}
-          {!diaData && <div style={{ textAlign:'center', color:sub, padding:20, fontSize:14 }}>Sin programación</div>}
           {diaData?.flights?.map((f,i) => (
             <div key={i} onClick={() => abrirVuelo(f, diaData)} style={{ display:'flex', alignItems:'center', background:d?'#2a2a3e':'#f8f8ff', borderRadius:12, padding:14, marginBottom:8, border:`1px solid ${border}`, cursor:'pointer' }}>
               <div style={{ flex:1 }}>
@@ -624,77 +634,7 @@ export default function App() {
               <span style={{ fontSize:22, color:sub }}>›</span>
             </div>
           ))}
-          {diaData?.tipo !== 'vuelo' && (
-            <div style={{ textAlign:'center', padding:20, color:sub, fontSize:14 }}>
-              {diaData?.tipo === 'guardia' ? '🟡 Guardia' : diaData?.tipo === 'dl' ? '🔵 Día Libre D/L' : '🟢 Día Off'}
-            </div>
-          )}
           <BtnCerrar onClose={() => setDiaSeleccionado(null)} dark={d} />
-        </ModalBase>
-      )}
-
-      {/* MODAL VUELO */}
-      {flightModal && (
-        <ModalBase onClose={() => setFlightModal(null)} dark={d}>
-          <div style={{ marginBottom:16 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#7F77DD' }}>{flightModal.flight.num}</div>
-            <div style={{ fontSize:20, fontWeight:700, color:text }}>{flightModal.flight.from} → {flightModal.flight.to}</div>
-          </div>
-          <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, marginBottom:16 }}>
-            {['info','crew'].map(t => (
-              <button key={t} onClick={() => setFlightTab(t)} style={{
-                flex:1, padding:'8px 0', border:'none', borderRadius:8, cursor:'pointer', fontSize:13,
-                fontWeight:flightTab===t?700:500,
-                background:flightTab===t?(d?'#12121e':'#fff'):'transparent',
-                color:flightTab===t?'#003087':sub,
-                boxShadow:flightTab===t?'0 1px 4px rgba(0,0,0,0.2)':'none'
-              }}>{t==='info'?'Flight Info':'Crew Info'}</button>
-            ))}
-          </div>
-
-          {flightTab === 'info' && (
-            <div>
-              <div style={{ display:'flex', gap:20, marginBottom:16, flexWrap:'wrap' }}>
-                {[
-                  ['Salida', flightModal.flight.dep, text],
-                  ['Llegada', flightModal.flight.arr, text],
-                  ...(flightModal.dayData?.checkin?[['Check-in', flightModal.dayData.checkin, '#1D9E75']]:[]),
-                  ...(flightModal.dayData?.checkout?[['Check-out', flightModal.dayData.checkout, '#EF9F27']]:[]),
-                ].map(([label, val, color]) => (
-                  <div key={label} style={{ textAlign:'center' }}>
-                    <div style={{ fontSize:11, color:sub, marginBottom:4 }}>{label}</div>
-                    <div style={{ fontSize:22, fontWeight:600, color }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-              {[flightModal.flight.from, flightModal.flight.to].map(code => (
-                <div key={code} style={{ background:d?'#2a2a3e':'#f8f8ff', borderRadius:10, padding:12, marginBottom:8 }}>
-                  <div style={{ fontSize:18, fontWeight:700, color:'#003087' }}>{code}</div>
-                  <div style={{ fontSize:13, color:sub, marginTop:2 }}>{AEROPUERTOS[code] || 'Aeropuerto'}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {flightTab === 'crew' && (
-            <div>
-              {flightModal.flight.crew?.length > 0 ? flightModal.flight.crew.map((c,i) => (
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:`1px solid ${border}` }}>
-                  <div style={{ width:36, height:36, borderRadius:18, background:ROLE_COLOR[c.role]||'#888', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <span style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{c.role}</span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize:11, color:sub }}>{ROLE_LABEL[c.role]||c.role}</div>
-                    <div style={{ fontSize:14, fontWeight:500, color:text }}>{c.name}</div>
-                  </div>
-                </div>
-              )) : (
-                <div style={{ textAlign:'center', color:sub, padding:20, fontSize:14 }}>Sin datos de tripulación</div>
-              )}
-            </div>
-          )}
-
-          <BtnCerrar onClose={() => setFlightModal(null)} dark={d} />
         </ModalBase>
       )}
 
