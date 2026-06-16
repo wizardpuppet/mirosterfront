@@ -639,7 +639,7 @@ export default function App() {
                         </div>
                       ) : (
                         <div style={{ color: '#2e7d32', fontStyle: 'italic', marginTop: '8px', textAlign: 'center', fontSize: '10px' }}>
-                          {data.tipo === 'dl' ? 'D/L Obligatorio' : 'Día Libre Completo'}
+                          {data.tipo === 'dl' ? 'Día Libre - D/L' : 'Día Off'}
                         </div>
                       )
                     ) : (
