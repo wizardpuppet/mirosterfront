@@ -189,15 +189,23 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
+  // Efecto de scroll de doble pasada para combatir retrasos de renderizado en móviles
   useEffect(() => {
     if (vista === 'agenda' && hoyRef.current && agendaScrollRef.current) {
-      setTimeout(() => {
-        // Al usar un contenedor con scroll propio, el offsetTop es exacto y no se rompe jamás
-        agendaScrollRef.current.scrollTo({
-          top: hoyRef.current.offsetTop - 10,
-          behavior: 'smooth'
-        })
-      }, 100)
+      const ejecutarScroll = () => {
+        if (hoyRef.current) {
+          hoyRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          })
+        }
+      }
+
+      // Primera pasada inmediata
+      setTimeout(ejecutarScroll, 60)
+      
+      // Segunda pasada de control (por si las alturas cambiaron al renderizarse los iconos/textos)
+      setTimeout(ejecutarScroll, 350)
     }
   }, [vista])
 
@@ -335,7 +343,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* BLOQUE SUPERIOR FIJO SÓLIDO (No compite con scrolls globales de pantalla móvil) */}
+      {/* BLOQUE SUPERIOR ABSOLUTAMENTE ESTÁTICO */}
       <div style={{ flexShrink: 0, zIndex: 110, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         
         {/* HEADER */}
@@ -438,10 +446,10 @@ export default function App() {
         </div>
       )}
 
-      {/* CONTENEDOR DE CONTENIDO INTERACTIVO MOBILE */}
+      {/* CONTENEDOR PRINCIPAL CON SCROLL PROPIO */}
       <div style={{ flex: 1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         
-        {/* CALENDARIO MOBILE (SCROLLABLE INDEPENDIENTE) */}
+        {/* VISTA CALENDARIO */}
         {vista === 'calendario' && (
           <div style={{ flex: 1, overflowY:'auto', padding:'10px 8px 24px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7,minmax(0,1fr))', marginBottom:4 }}>
@@ -485,9 +493,9 @@ export default function App() {
           </div>
         )}
 
-        {/* AGENDA MOBILE (SCROLLABLE TOTALMENTE PROPIO) */}
+        {/* VISTA AGENDA (CAJA CON CONTENEDOR DE SCROLL DESIGNADO) */}
         {vista === 'agenda' && (
-          <div ref={agendaScrollRef} style={{ flex: 1, overflowY:'auto', paddingBottom:36 }}>
+          <div ref={agendaScrollRef} style={{ flex: 1, overflowY:'auto', paddingBottom:40 }}>
             {diasAgenda.length === 0 && (
               <div style={{ textAlign:'center', padding:40, color:sub }}>
                 <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
@@ -519,7 +527,7 @@ export default function App() {
               )
 
               return (
-                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>
+                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10, paddingTop: esHoyAgenda ? '4px' : '0px' }}>
                   <div style={{ 
                     display:'flex', alignItems:'center', gap:6, padding:'7px 16px', 
                     background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),
@@ -585,7 +593,6 @@ export default function App() {
         <div ref={printablePdfRef} style={{ width: '284mm', height: '198mm', boxSizing: 'border-box', padding: '10px 12px', background: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           
           <div>
-            {/* Header del Reporte */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #003087', paddingBottom: '4px', marginBottom: '8px' }}>
               <div>
                 <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold', color: '#003087', letterSpacing: '-0.5px' }}>PROGRAMACIÓN DE VUELOS</h1>
@@ -597,14 +604,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Días de la semana */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid #000', borderLeft: '1px solid #000', borderRight: '1px solid #000', background: '#f0f4f8', textAlign: 'center', fontWeight: 'bold', fontSize: '11px' }}>
               {['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'].map(d => (
                 <div key={d} style={{ padding: '5px 0', borderRight: '1px solid #000' }}>{d}</div>
               ))}
             </div>
 
-            {/* Grilla de días */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderLeft: '1px solid #000', borderBottom: '1px solid #000', gap: '0px' }}>
               {Array(primerDia === 0 ? 6 : primerDia - 1).fill(null).map((_, i) => (
                 <div key={`pdf-e-${i}`} style={{ borderRight: '1px solid #000', borderTop: '1px solid #000', background: '#fafafa', height: '28mm' }} />
@@ -670,7 +675,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* NOTA AL PIE DEL PDF */}
           <div style={{ textAlign: 'center', fontSize: '16px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
             Por favor chequear información con el roster original. Aplicación en BETA.
           </div>
