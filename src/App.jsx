@@ -181,6 +181,7 @@ export default function App() {
   const [guardado, setGuardado]       = useState(false)
 
   const hoyRef = useRef(null)
+  const navbarRef = useRef(null)
   const printablePdfRef = useRef(null)
 
   useEffect(() => {
@@ -191,8 +192,13 @@ export default function App() {
   useEffect(() => {
     if (vista === 'agenda' && hoyRef.current) {
       setTimeout(() => {
-        // block: 'start' evita que empuje el encabezado fixed hacia arriba
-        hoyRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        // Cálculo manual exacto para que frene abajo del bloque fijo superior
+        const navHeight = navbarRef.current ? navbarRef.current.offsetHeight : 140
+        const elementPosition = hoyRef.current.getBoundingClientRect().top + window.pageYOffset
+        window.scrollTo({
+          top: elementPosition - navHeight,
+          behavior: 'smooth'
+        })
       }, 150)
     }
   }, [vista])
@@ -331,8 +337,8 @@ export default function App() {
         }
       `}</style>
 
-      {/* CONTENEDOR AGRUPADO STICKY: Mantiene toda la navegación junta siempre visible arriba */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* CONTENEDOR UNIFICADO EN ULTRA-STICKY: Congela todo el bloque de navegación arriba */}
+      <div ref={navbarRef} style={{ position: 'sticky', top: 0, zIndex: 110, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
         
         {/* HEADER */}
         <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
@@ -401,7 +407,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* TABS (CALENDARIO / AGENDA) */}
+        {/* SOLAPAS: CALENDARIO / AGENDA */}
         <div style={{ padding:'12px 16px 8px', background:card, borderBottom:`1px solid ${border}` }}>
           <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, maxWidth:300 }}>
             {['calendario','agenda'].map(v => (
@@ -416,7 +422,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* NAV MES (MES ACTUAL Y ACCIONES DE CAMBIO) */}
+        {/* FILA DEL MES ACTUAL Y FLECHAS */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 24px', background:card, borderBottom:`1px solid ${border}` }}>
           <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
             style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer', padding:'0 10px' }}>‹</button>
@@ -475,7 +481,7 @@ export default function App() {
             </div>
 
             {/* AVISO BETA EN LA APP */}
-            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:14, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
+            <div style={{ textAlign:'center', marginTop:20, padding:'12px 16px', fontSize:15, color:sub, fontStyle:'italic', borderTop:`1px solid ${border}` }}>
               ⚠️ Por favor chequear información con el roster original. Aplicación en BETA.
             </div>
           </div>
@@ -515,8 +521,7 @@ export default function App() {
               )
 
               return (
-                /* scroll-margin-top asegura que deje un margen para que no se pegue abajo del header sticky */
-                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10, scrollMarginTop: '150px' }}>
+                <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>
                   <div style={{ 
                     display:'flex', alignItems:'center', gap:6, padding:'7px 16px', 
                     background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),
@@ -668,7 +673,7 @@ export default function App() {
           </div>
 
           {/* NOTA AL PIE DEL PDF */}
-          <div style={{ textAlign: 'center', fontSize: '9px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
+          <div style={{ textAlign: 'center', fontSize: '15px', color: '#555', fontStyle: 'italic', borderTop: '1px dashed #ccc', paddingTop: '4px', marginTop: '5px' }}>
             Por favor chequear información con el roster original. Aplicación en BETA.
           </div>
 
