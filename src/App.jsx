@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react' // 1. Importamos useRef
+import { useState, useEffect, useRef } from 'react'
 
 const AEROPUERTOS = {
   AEP: 'Aeroparque Jorge Newbery', EZE: 'Ezeiza Ministro Pistarini',
@@ -26,13 +26,12 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 const MESES_ABREV = {0:'JAN',1:'FEB',2:'MAR',3:'APR',4:'MAY',5:'JUN',6:'JUL',7:'AUG',8:'SEP',9:'OCT',10:'NOV',11:'DEC'}
 const MESES_CORTO = {JAN:'Ene',FEB:'Feb',MAR:'Mar',APR:'Abr',MAY:'May',JUN:'Jun',JUL:'Jul',AUG:'Ago',SEP:'Sep',OCT:'Oct',NOV:'Nov',DEC:'Dic'}
 const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-const DIAS_SEMANA_CORTO = {MON:'Lun',TUE:'Mar',WED:'Mié',THU:'Jue',FRI:'Vie',SAT:'Sáb',SUN:'Dom'}
 const ROLE_LABEL = { CP:'Comandante', FO:'Copiloto', CM:'Jefe de Cabina', AX:'Auxiliar' }
 const ROLE_COLOR = { CP:'#003087', FO:'#7F77DD', CM:'#1D9E75', AX:'#EF9F27' }
 const COLOR_TIPO = { libre:'#1D9E75', dl:'#378ADD', vuelo:'#7F77DD', guardia:'#EF9F27' }
 const LABEL_TIPO = { libre:'Dia OFF', dl:'D/L', vuelo:'Vuelo', guardia:'Guardia' }
 
-// Cache, turnos y procesamiento se mantienen exactamente igual...
+// ─── CACHÉ ────────────────────────────────────────────────────────────────────
 function guardarRosterCache(roster) {
   try {
     localStorage.setItem('ar_roster', JSON.stringify(roster))
@@ -76,6 +75,7 @@ function tiempoDesdeSync() {
 function colorTipo(t) { return COLOR_TIPO[t] || '#ccc' }
 function labelTipo(t) { return LABEL_TIPO[t] || t || '' }
 
+// ─── COMPONENTES AUXILIARES ───────────────────────────────────────────────────
 function ModalBase({ onClose, children, dark }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'flex-end', zIndex:200 }} onClick={onClose}>
@@ -101,9 +101,6 @@ function BtnCerrar({ onClose, dark }) {
   )
 }
 
-const DIAS_NOMBRE_ES = {MON:'Lun',TUE:'Mar',WED:'Mié',THU:'Jue',FRI:'Vie',SAT:'Sáb',SUN:'Dom'}
-const DIAS_SEMANA_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT']
-
 function calcTurn(arr1, dep2) {
   if (!arr1 || !dep2) return null
   const [h1,m1] = arr1.split(':').map(Number)
@@ -125,7 +122,6 @@ function procesarVuelos(vuelos) {
     const m = fechaRef.match(/(MON|TUE|WED|THU|FRI|SAT|SUN)\s+(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/)
     if (!m) continue
 
-    const dayName = m[1]
     const dia = parseInt(m[2])
     const mesKey = m[3]
     const anio = v.anio || new Date().getFullYear()
@@ -133,7 +129,7 @@ function procesarVuelos(vuelos) {
     const tipo = v.tipo || 'vuelo'
 
     if (!days[key]) {
-      days[key] = { tipo, dia, mes: mesesN[mesKey], anio, dayName, flights: [], checkin: null, checkout: null, debrief: null }
+      days[key] = { tipo, dia, mes: mesesN[mesKey], anio, dayName: m[1], flights: [], checkin: null, checkout: null, debrief: null }
     }
 
     if (tipo === 'vuelo' && days[key].tipo !== 'vuelo') days[key].tipo = 'vuelo'
@@ -161,9 +157,11 @@ function procesarVuelos(vuelos) {
       }
     }
   }
+
   return days
 }
 
+// ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function App() {
   const [usuario, setUsuario] = useState(() => localStorage.getItem('ar_usuario') || '')
   const [clave, setClave]     = useState(() => localStorage.getItem('ar_clave') || '')
@@ -183,7 +181,6 @@ export default function App() {
   const [claveEdit, setClaveEdit]     = useState('')
   const [guardado, setGuardado]       = useState(false)
 
-  // 2. Referencia para el elemento del día de hoy en la Agenda
   const hoyRef = useRef(null)
 
   useEffect(() => {
@@ -191,12 +188,11 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // 3. Effect para scrollear automáticamente hacia el día de hoy cuando entramos a la vista 'agenda'
   useEffect(() => {
     if (vista === 'agenda' && hoyRef.current) {
       setTimeout(() => {
         hoyRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 150) // Pequeño delay para asegurar que el DOM terminó de renderizar
+      }, 150)
     }
   }, [vista])
 
@@ -216,7 +212,7 @@ export default function App() {
 
   const guardarConfig = () => {
     setUsuario(usuarioEdit)
-    setClave(claveEdit)
+    setClaveEdit(claveEdit)
     localStorage.setItem('ar_usuario', usuarioEdit)
     localStorage.setItem('ar_clave', claveEdit)
     setGuardado(true)
@@ -238,16 +234,25 @@ export default function App() {
     .sort((a, b) => a[1].dia - b[1].dia)
 
   const sincronizar = async () => {
-    if (!usuario || !clave) { abrirConfig(); return }
+    if (!usuario || !clave) {
+      abrirConfig()
+      return
+    }
     try {
       setLoading(true)
-      const response = await fetch('https://miroster-production.up.railway.app/roster', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, clave })
-      })
+      const response = await fetch(
+        'https://miroster-production.up.railway.app/roster',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, clave })
+        }
+      )
       const data = await response.json()
-      if (!data.ok) { alert('Error obteniendo roster. Mostrando programación guardada.'); return }
+      if (!data.ok) {
+        alert('Error obteniendo roster. Mostrando programación guardada.')
+        return
+      }
       const rosterProcesado = procesarVuelos(data.vuelos || [])
       if (Object.keys(rosterProcesado).length > 0) {
         setRoster(prev => {
@@ -262,7 +267,9 @@ export default function App() {
     } catch (err) {
       console.error(err)
       alert('Error conectando al servidor. Mostrando programación guardada.')
-    } finally { setLoading(false) }
+    } finaly {
+      setLoading(false)
+    }
   }
 
   const abrirVuelo = (flight, dayData) => {
@@ -286,18 +293,26 @@ export default function App() {
       <div style={{ background:card, borderBottom:`1px solid ${border}`, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, zIndex:100 }}>
         <div>
           <span style={{ fontSize:18, fontWeight:700, color:text }}>✈️ Mi Programación</span>
-          {ultimaSync && tieneRoster && <div style={{ fontSize:11, color:sub, marginTop:1 }}>🔄 {ultimaSync}</div>}
+          {ultimaSync && tieneRoster && (
+            <div style={{ fontSize:11, color:sub, marginTop:1 }}>🔄 {ultimaSync}</div>
+          )}
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>{d?'☀️':'🌙'}</button>
+          <button onClick={toggleDark} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>
+            {d?'☀️':'🌙'}
+          </button>
           <button onClick={abrirConfig} style={{ background:d?'#2a2a3e':'#f0f0f0', color:sub, border:'none', borderRadius:8, padding:'8px 12px', fontSize:16, cursor:'pointer' }}>⚙️</button>
-          <button onClick={sincronizar} disabled={loading} style={{ background:'#003087', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, fontSize:13, cursor:'pointer', opacity:loading?0.7:1 }}>{loading?'Cargando...':'⟳ SYNC'}</button>
+          <button onClick={sincronizar} disabled={loading} style={{ background:'#003087', color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontWeight:700, fontSize:13, cursor:'pointer', opacity:loading?0.7:1 }}>
+            {loading?'Cargando...':'⟳ SYNC'}
+          </button>
         </div>
       </div>
 
       {/* BANNER OFFLINE */}
       {tieneRoster && !navigator.onLine && (
-        <div style={{ background:'#EF9F27', color:'#fff', fontSize:12, textAlign:'center', padding:'6px 16px' }}>📴 Sin conexión — mostrando programación guardada</div>
+        <div style={{ background:'#EF9F27', color:'#fff', fontSize:12, textAlign:'center', padding:'6px 16px' }}>
+          📴 Sin conexión — mostrando programación guardada
+        </div>
       )}
 
       {/* TABS */}
@@ -317,9 +332,11 @@ export default function App() {
 
       {/* NAV MES */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 24px', background:card }}>
-        <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)} style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>‹</button>
+        <button onClick={() => mesActual===0?(setMesActual(11),setAnioActual(a=>a-1)):setMesActual(m=>m-1)}
+          style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>‹</button>
         <span style={{ fontWeight:700, fontSize:16, color:text }}>{MESES[mesActual]} {anioActual}</span>
-        <button onClick={() => mesActual===11?(setMesActual(0),setAnioActual(a=>a+1)):setMesActual(m=>m+1)} style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>›</button>
+        <button onClick={() => mesActual===11?(setMesActual(0),setAnioActual(a=>a+1)):setMesActual(m=>m+1)}
+          style={{ background:'none', border:'none', fontSize:28, color:'#003087', cursor:'pointer' }}>›</button>
       </div>
 
       {/* CALENDARIO */}
@@ -335,45 +352,35 @@ export default function App() {
               const data = getDayData(dia)
               const esHoy = dia===hoy.getDate() && mesActual===hoy.getMonth() && anioActual===hoy.getFullYear()
               
-              // 4. Lógica para saber si el día ya pasó
               const diaFecha = new Date(anioActual, mesActual, dia)
               const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
               const yaPaso = diaFecha < hoySinHora
 
-              // 5. El color principal cambia si ya pasó (gris oscuro o claro según el theme), excepto si es hoy
               let fondoDia = card
               if (esHoy) {
-                fondoDia = d ? '#112244' : '#e6f0ff' // Un azul llamativo de fondo para identificar hoy de inmediato
+                fondoDia = d ? '#112244' : '#e6f0ff'
               } else if (data) {
-                fondoDia = yaPaso ? (d ? '#282830' : '#e0e0e0') : colorTipo(data.tipo)[cite: 1]
+                fondoDia = yaPaso ? (d ? '#282830' : '#e0e0e0') : colorTipo(data.tipo)
               }
 
               return (
                 <div key={dia} onClick={() => data && setDiaSeleccionado(dia)} style={{
                   aspectRatio:'1', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
                   borderRadius:8, 
-                  // Si ya pasó va gris, si es hoy le metemos un borde grueso azul distintivo[cite: 1]
                   border: esHoy 
                     ? '3px solid #0052cc' 
-                    : (data ? `2px solid ${yaPaso ? (d ? '#444' : '#b5b5b5') : colorTipo(data.tipo)}` : `1px solid ${border}`),[cite: 1]
+                    : (data ? `2px solid ${yaPaso ? (d ? '#444' : '#b5b5b5') : colorTipo(data.tipo)}` : `1px solid ${border}`),
                   background: fondoDia,
                   cursor:data?'pointer':'default'
                 }}>
                   <span style={{ 
                     fontSize:14, 
                     fontWeight:esHoy?800:400, 
-                    // Si ya pasó ponemos el texto sutil, si es hoy resalta[cite: 1]
-                    color: esHoy ? '#0052cc' : (data ? (yaPaso ? sub : '#fff') : text),[cite: 1]
+                    color: esHoy ? '#0052cc' : (data ? (yaPaso ? sub : '#fff') : text),
                     lineHeight:1 
                   }}>{dia}</span>
                   {data && (
-                    <span style={{ 
-                      fontSize:8, 
-                      fontWeight:700, 
-                      color: yaPaso ? sub : '#fff', // Grisado si ya pasó[cite: 1]
-                      marginTop:1, 
-                      lineHeight:1 
-                    }}>
+                    <span style={{ fontSize:8, fontWeight:700, color: yaPaso ? sub : '#fff', marginTop:1, lineHeight:1 }}>
                       {data.tipo === 'vuelo' ? (data.flights.length > 1 ? `${data.flights.length}✈` : '✈') :
                        data.tipo === 'guardia' ? 'GUA' :
                        data.tipo === 'dl' ? 'D/L' : 'OFF'}
@@ -383,7 +390,6 @@ export default function App() {
               )
             })}
           </div>
-          {/* Leyendas */}
           <div style={{ display:'flex', justifyContent:'center', gap:16, padding:'12px 0', flexWrap:'wrap' }}>
             {[['#7F77DD','Vuelo'],['#1D9E75','Dia OFF'],['#378ADD','D/L'],['#EF9F27','Guardia']].map(([color,label]) => (
               <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
@@ -392,6 +398,12 @@ export default function App() {
               </div>
             ))}
           </div>
+          {!tieneRoster && (
+            <div style={{ textAlign:'center', padding:40, color:sub }}>
+              <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
+              <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -401,30 +413,28 @@ export default function App() {
           {diasAgenda.length === 0 && (
             <div style={{ textAlign:'center', padding:40, color:sub }}>
               <div style={{ fontSize:15, marginBottom:6 }}>Sin programación cargada</div>
+              <div style={{ fontSize:13 }}>Tocá ⟳ SYNC para sincronizar</div>
             </div>
           )}
           {diasAgenda.map(([key, dayData]) => {
             const esHoyAgenda = dayData.dia === hoy.getDate() && dayData.mes === hoy.getMonth() && (dayData.anio || anioActual) === hoy.getFullYear()
             
-            // 6. Lógica de actividad pasada en la Agenda[cite: 1]
             const diaFecha = new Date(dayData.anio || anioActual, dayData.mes, dayData.dia)
             const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
             const yaPasoAgenda = diaFecha < hoySinHora
 
-            // Colores basados en si ya pasó el día[cite: 1]
             const colorDiaBase = colorTipo(dayData.tipo)
-            const colorDia = yaPasoAgenda ? (d ? '#555' : '#999') : (esHoyAgenda ? '#1D9E75' : colorDiaBase)[cite: 1]
+            const colorDia = yaPasoAgenda ? (d ? '#555' : '#999') : (esHoyAgenda ? '#1D9E75' : colorDiaBase)
 
-            // Fila de evento modificada para aceptar grisado cuando ya pasó[cite: 1]
             const FilaEvento = ({ icono, titulo, subtitulo, horario, onClick, color }) => (
               <div onClick={onClick} style={{ 
                 display:'flex', alignItems:'center', padding:'10px 16px', borderBottom:`1px solid ${border}`, 
                 background:card, cursor: onClick?'pointer':'default', gap:12,
-                opacity: yaPasoAgenda ? 0.6 : 1 // Opacidad reducida automática para el contenido que ya pasó[cite: 1]
+                opacity: yaPasoAgenda ? 0.6 : 1 
               }}>
                 <div style={{ width:32, height:32, borderRadius:16, background: d?'#2a2a3e':'#f0f0f8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:16, filter: yaPasoAgenda ? 'grayscale(1)' : 'none' }}>{icono}</div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:600, color: yaPasoAgenda ? sub : (color || text), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>[cite: 1]
+                  <div style={{ fontSize:14, fontWeight:600, color: yaPasoAgenda ? sub : (color || text), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>
                   {subtitulo && <div style={{ fontSize:11, color:sub, marginTop:1 }}>{subtitulo}</div>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
@@ -435,13 +445,11 @@ export default function App() {
             )
 
             return (
-              // 7. Agregamos el `ref` si es el día de hoy para el auto-scroll[cite: 1]
-              <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>[cite: 1]
-                {/* Header del día */}
+              <div key={key} ref={esHoyAgenda ? hoyRef : null} style={{ marginTop:10 }}>
                 <div style={{ 
                   display:'flex', alignItems:'center', gap:6, padding:'7px 16px', 
-                  background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),[cite: 1]
-                  borderLeft: `3px solid ${colorDia}` 
+                  background: esHoyAgenda ? (d?'#0d2b1f':'#d4f0e4') : (yaPasoAgenda ? (d ? '#181825' : '#f0f0f5') : (d?'#1a1a2e':'#ebebf5')),
+                  borderLeft:`3px solid ${colorDia}` 
                 }}>
                   <span style={{ fontSize:13, fontWeight:700, color:colorDia }}>
                     {DIAS_SEMANA[new Date(dayData.anio||anioActual, dayData.mes, dayData.dia).getDay()]}
@@ -453,18 +461,14 @@ export default function App() {
                     <span style={{ marginLeft:4, background:'#1D9E75', color:'#fff', borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>HOY</span>
                   )}
                   {!esHoyAgenda && (
-                    <span style={{ marginLeft:4, background:yaPasoAgenda ? (d?'#333':'#ddd') : colorDia+'33', color:colorDia, borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>[cite: 1]
-                      {labelTipo(dayData.tipo)}
-                    </span>
+                    <span style={{ marginLeft:4, background:yaPasoAgenda ? (d?'#333':'#ddd') : colorDia+'33', color:colorDia, borderRadius:10, padding:'1px 8px', fontSize:10, fontWeight:700 }}>{labelTipo(dayData.tipo)}</span>
                   )}
                 </div>
 
-                {/* REPORT */}
                 {dayData.checkin && dayData.tipo !== 'guardia' && (
                   <FilaEvento icono="🕐" titulo="REPORT" subtitulo={dayData.flights[0]?.from || ''} horario={dayData.checkin+'L'} />
                 )}
 
-                {/* Vuelos */}
                 {dayData.flights.map((f,i) => (
                   <div key={i}>
                     {f.turn && (
@@ -478,17 +482,15 @@ export default function App() {
                       subtitulo={`${f.num}${f.turn ? ' · turn '+f.turn : ''}`}
                       horario={`${f.dep}L – ${f.arr}L`}
                       onClick={() => abrirVuelo(f, dayData)}
-                      color={yaPasoAgenda ? null : '#7F77DD'}[cite: 1]
+                      color={yaPasoAgenda ? null : '#7F77DD'}
                     />
                   </div>
                 ))}
 
-                {/* DEBRIEF */}
                 {dayData.checkout && dayData.tipo !== 'guardia' && (
-                  <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.checkout+'L'} color={yaPasoAgenda ? null : '#7F77DD'} />[cite: 1]
+                  <FilaEvento icono="🏁" titulo="DEBRIEF" subtitulo={dayData.flights[dayData.flights.length-1]?.to || ''} horario={dayData.checkout+'L'} color={yaPasoAgenda ? null : '#7F77DD'} />
                 )}
 
-                {/* Días sin vuelos */}
                 {dayData.flights.length === 0 && (
                   <FilaEvento
                     icono={dayData.tipo==='libre'?'🏠': dayData.tipo==='dl'?'📋': dayData.tipo==='guardia'?'🛡️':'📅'}
@@ -503,15 +505,130 @@ export default function App() {
         </div>
       )}
 
-      {/* Los modales de CONFIGURACIÓN, DÍA y VUELO se mantienen exactamente igual abajo... */}
+      {/* MODAL CONFIGURACIÓN */}
       {configModal && (
         <ModalBase onClose={() => setConfigModal(false)} dark={d}>
           <div style={{ fontSize:18, fontWeight:700, color:text, marginBottom:4 }}>⚙️ Configuración</div>
+          <div style={{ fontSize:13, color:sub, marginBottom:20 }}>Guardá tus credenciales de Aerolíneas</div>
+          <label style={{ fontSize:12, color:sub, fontWeight:600 }}>LEGAJO</label>
           <input placeholder="Legajo" value={usuarioEdit} onChange={e => setUsuarioEdit(e.target.value)} style={inputStyle} />
+          <label style={{ fontSize:12, color:sub, fontWeight:600 }}>CONTRASEÑA</label>
           <input type="password" placeholder="Contraseña" value={claveEdit} onChange={e => setClaveEdit(e.target.value)} style={{ ...inputStyle, marginBottom:20 }} />
-          <button onClick={guardarConfig} style={{ width:'100%', padding:16, color:'#fff', border:'none', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', background:'#003087' }}>Guardar</button>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+            <span style={{ fontSize:14, color:sub }}>Modo oscuro</span>
+            <div onClick={toggleDark} style={{ width:44, height:24, borderRadius:12, background:d?'#003087':'#ccc', position:'relative', cursor:'pointer' }}>
+              <div style={{ width:18, height:18, borderRadius:9, background:'#fff', position:'absolute', top:3, left:d?23:3 }} />
+            </div>
+          </div>
+          <button onClick={guardarConfig} disabled={!usuarioEdit||!claveEdit} style={{
+            width:'100%', padding:16, color:'#fff', border:'none', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', marginBottom:4,
+            background:guardado?'#1D9E75':(!usuarioEdit||!claveEdit)?'#aaa':'#003087'
+          }}>{guardado?'✓ Guardado':'Guardar'}</button>
+          <button onClick={() => setConfigModal(false)} style={{ width:'100%', padding:14, background:'none', border:'none', color:sub, fontSize:14, cursor:'pointer' }}>Cancelar</button>
         </ModalBase>
       )}
+
+      {/* MODAL DÍA */}
+      {diaSeleccionado && (
+        <ModalBase onClose={() => setDiaSeleccionado(null)} dark={d}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <span style={{ fontSize:18, fontWeight:700, color:text }}>{diaSeleccionado} de {MESES[mesActual]}</span>
+            {diaData && <span style={{ border:`1.5px solid ${colorTipo(diaData.tipo)}`, borderRadius:20, padding:'3px 10px', fontSize:12, fontWeight:700, color:colorTipo(diaData.tipo) }}>{labelTipo(diaData.tipo)}</span>}
+          </div>
+          {diaData?.checkin && (
+            <div style={{ display:'flex', gap:20, marginBottom:14, paddingBottom:14, borderBottom:`1px solid ${border}` }}>
+              <span style={{ fontSize:13, color:sub }}>Check-in <strong style={{ color:text }}>{diaData.checkin}</strong></span>
+              {diaData.checkout && <span style={{ fontSize:13, color:sub }}>Check-out <strong style={{ color:text }}>{diaData.checkout}</strong></span>}
+            </div>
+          )}
+          {!diaData && <div style={{ textAlign:'center', color:sub, padding:20, fontSize:14 }}>Sin programación</div>}
+          {diaData?.flights?.map((f,i) => (
+            <div key={i} onClick={() => abrirVuelo(f, diaData)} style={{ display:'flex', alignItems:'center', background:d?'#2a2a3e':'#f8f8ff', borderRadius:12, padding:14, marginBottom:8, border:`1px solid ${border}`, cursor:'pointer' }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#7F77DD', marginBottom:2 }}>{f.num}</div>
+                <div style={{ fontSize:16, fontWeight:600, color:text }}>{f.from} → {f.to}</div>
+              </div>
+              <div style={{ marginRight:8, textAlign:'right' }}>
+                <div style={{ fontSize:13, color:sub }}>🛫 {f.dep}</div>
+                {f.arr && <div style={{ fontSize:13, color:sub }}>🛬 {f.arr}</div>}
+              </div>
+              <span style={{ fontSize:22, color:sub }}>›</span>
+            </div>
+          ))}
+          {diaData?.tipo !== 'vuelo' && (
+            <div style={{ textAlign:'center', padding:20, color:sub, fontSize:14 }}>
+              {diaData?.tipo === 'guardia' ? '🟡 Guardia' : diaData?.tipo === 'dl' ? '🔵 Día Libre D/L' : '🟢 Día Off'}
+            </div>
+          )}
+          <BtnCerrar onClose={() => setDiaSeleccionado(null)} dark={d} />
+        </ModalBase>
+      )}
+
+      {/* MODAL VUELO */}
+      {flightModal && (
+        <ModalBase onClose={() => setFlightModal(null)} dark={d}>
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#7F77DD' }}>{flightModal.flight.num}</div>
+            <div style={{ fontSize:20, fontWeight:700, color:text }}>{flightModal.flight.from} → {flightModal.flight.to}</div>
+          </div>
+          <div style={{ display:'flex', background:d?'#2a2a3e':'#f0f0f0', borderRadius:10, padding:3, marginBottom:16 }}>
+            {['info','crew'].map(t => (
+              <button key={t} onClick={() => setFlightTab(t)} style={{
+                flex:1, padding:'8px 0', border:'none', borderRadius:8, cursor:'pointer', fontSize:13,
+                fontWeight:flightTab===t?700:500,
+                background:flightTab===t?(d?'#12121e':'#fff'):'transparent',
+                color:flightTab===t?'#003087':sub,
+                boxShadow:flightTab===t?'0 1px 4px rgba(0,0,0,0.2)':'none'
+              }}>{t==='info'?'Flight Info':'Crew Info'}</button>
+            ))}
+          </div>
+
+          {flightTab === 'info' && (
+            <div>
+              <div style={{ display:'flex', gap:20, marginBottom:16, flexWrap:'wrap' }}>
+                {[
+                  ['Salida', flightModal.flight.dep, text],
+                  ['Llegada', flightModal.flight.arr, text],
+                  ...(flightModal.dayData?.checkin?[['Check-in', flightModal.dayData.checkin, '#1D9E75']]:[]),
+                  ...(flightModal.dayData?.checkout?[['Check-out', flightModal.dayData.checkout, '#EF9F27']]:[]),
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ textAlign:'center' }}>
+                    <div style={{ fontSize:11, color:sub, marginBottom:4 }}>{label}</div>
+                    <div style={{ fontSize:22, fontWeight:600, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              {[flightModal.flight.from, flightModal.flight.to].map(code => (
+                <div key={code} style={{ background:d?'#2a2a3e':'#f8f8ff', borderRadius:10, padding:12, marginBottom:8 }}>
+                  <div style={{ fontSize:18, fontWeight:700, color:'#003087' }}>{code}</div>
+                  <div style={{ fontSize:13, color:sub, marginTop:2 }}>{AEROPUERTOS[code] || 'Aeropuerto'}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {flightTab === 'crew' && (
+            <div>
+              {flightModal.flight.crew?.length > 0 ? flightModal.flight.crew.map((c,i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:`1px solid ${border}` }}>
+                  <div style={{ width:36, height:36, borderRadius:18, background:ROLE_COLOR[c.role]||'#888', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <span style={{ color:'#fff', fontWeight:700, fontSize:12 }}>{c.role}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, color:sub }}>{ROLE_LABEL[c.role]||c.role}</div>
+                    <div style={{ fontSize:14, fontWeight:500, color:text }}>{c.name}</div>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ textAlign:'center', color:sub, padding:20, fontSize:14 }}>Sin datos de tripulación</div>
+              )}
+            </div>
+          )}
+
+          <BtnCerrar onClose={() => setFlightModal(null)} dark={d} />
+        </ModalBase>
+      )}
+
     </div>
   )
 }
