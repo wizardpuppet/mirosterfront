@@ -212,7 +212,7 @@ export default function App() {
 
   const guardarConfig = () => {
     setUsuario(usuarioEdit)
-    setClaveEdit(claveEdit)
+    setClave(claveEdit)
     localStorage.setItem('ar_usuario', usuarioEdit)
     localStorage.setItem('ar_clave', claveEdit)
     setGuardado(true)
@@ -267,7 +267,7 @@ export default function App() {
     } catch (err) {
       console.error(err)
       alert('Error conectando al servidor. Mostrando programación guardada.')
-    } finaly {
+    } finally {
       setLoading(false)
     }
   }
