@@ -12,7 +12,7 @@ const AEROPUERTOS = {
   SLA: 'Salta Martín Miguel de Güemes', JUJ: 'Jujuy Horacio Guzmán',
   RSA: 'Santa Rosa', VDM: 'Viedma', PMQ: 'Perito Moreno',
   CTC: 'Catamarca', IRJ: 'La Rioja', UAQ: 'San Juan', AFA: 'San Rafael',
-  RCU: 'Villa Mercedes', CPC: 'Chapelco', REL: 'Trelew', MDP: 'Mar del Plata',
+  RCU: 'Villa Mercedes Cordoba', CPC: 'Chapelco', REL: 'Trelew', MDP: 'Mar del Plata',
   EPA: 'El Palomar', FMA: 'Formosa', RES: 'Resistencia', PSS: 'Posadas',
   CNQ: 'Corrientes', MVD: 'Montevideo Carrasco', ASU: 'Asunción Silvio Pettirossi',
   SCL: 'Santiago Arturo Merino Benítez', LIM: 'Lima Jorge Chávez',
@@ -21,6 +21,26 @@ const AEROPUERTOS = {
   JFK: 'New York John F. Kennedy', MAD: 'Madrid Barajas',
   BCN: 'Barcelona El Prat', FCO: 'Roma Fiumicino',
   CDG: 'París Charles de Gaulle', AMS: 'Ámsterdam Schiphol',
+  
+  // Nuevos Aeropuertos Agregados
+  RHD: 'Termas de Río Hondo',
+  SDE: 'Santiago del Estero Vicecomodoro Ángel de la Paz Aragonés',
+  PRA: 'Paraná General Justo José de Urquiza',
+  LUQ: 'San Luis Brigadier Mayor César Raúl Ojeda',
+  RLO: 'Valle del Conlara Merlo',
+  EQS: 'Esquel',
+  RGS: 'Río Grande Gobernador Ramón Trejo Noel',
+  PDP: 'Punta del Este Capitán de Corbeta Carlos A. Curbelo',
+  POA: 'Porto Alegre Salgado Filho',
+  FLN: 'Florianópolis Hercílio Luz',
+  CWB: 'Curitiba Afonso Pena',
+  BPS: 'Porto Seguro',
+  SSA: 'Salvador de Bahía Deputado Luís Eduardo Magalhães',
+  CFB: 'Cabo Frio',
+  VVI: 'Santa Cruz de la Sierra Viru Viru',
+  AUA: 'Aruba Queen Beatrix',
+  CUN: 'Cancún International',
+  PUJ: 'Punta Cana International'
 }
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
