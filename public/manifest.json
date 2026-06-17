@@ -1,5 +1,5 @@
 {
-  "name": "MiRoster — Aerolíneas Argentinas",
+  "name": "ArgentumRoster",
   "short_name": "MiRoster",
   "description": "Tu programación de vuelos siempre disponible",
   "start_url": "/",
@@ -9,9 +9,9 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+     "src": "logo.png",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     },
     {
